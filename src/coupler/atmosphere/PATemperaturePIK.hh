@@ -1,4 +1,5 @@
-// Copyright (C) 2008-2015 PISM Authors
+// Copyright (C)  2008-2015 PISM Authors
+
 //
 // This file is part of PISM.
 //
