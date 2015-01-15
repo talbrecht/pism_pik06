@@ -1,5 +1,4 @@
-// Copyright (C) 2008-2012 Ed Bueler, Constantine Khroulev, Ricarda Winkelmann,
-// Gudfinna Adalgeirsdottir and Andy Aschwanden
+// Copyright (C) 2008-2015 PISM Authors
 //
 // This file is part of PISM.
 //

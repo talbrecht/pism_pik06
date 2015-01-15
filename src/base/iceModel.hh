@@ -107,6 +107,10 @@ class IceModel {
   friend class IceModel_max_diffusivity;
   friend class IceModel_surface_flux;
   friend class IceModel_surface_flux_cumulative;
+  friend class IceModel_surface_flux_sheet;
+  friend class IceModel_surface_flux_cumulative_sheet;
+  friend class IceModel_surface_flux_shelf;
+  friend class IceModel_surface_flux_cumulative_shelf;
   friend class IceModel_grounded_basal_flux;
   friend class IceModel_grounded_basal_flux_cumulative;
   friend class IceModel_sub_shelf_flux;
@@ -292,6 +296,8 @@ protected:
     nonneg_rule_flux_cumulative,
     sub_shelf_ice_flux_cumulative,
     surface_ice_flux_cumulative,
+    surface_ice_flux_cumulative_sheet,
+    surface_ice_flux_cumulative_shelf,
     sum_divQ_SIA_cumulative,
     sum_divQ_SSA_cumulative,
     Href_to_H_flux_cumulative,
