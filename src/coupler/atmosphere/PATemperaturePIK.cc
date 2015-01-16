@@ -131,7 +131,7 @@ PetscErrorCode PATemperaturePIK::init(PISMVars &vars) {
   return 0;
 }
 
-
+/*
 PetscErrorCode PATemperaturePIK::precip_time_series(int i, int j, double *values) {
 
   for (unsigned int k = 0; k < m_ts_times.size(); k++)
@@ -139,7 +139,7 @@ PetscErrorCode PATemperaturePIK::precip_time_series(int i, int j, double *values
 
   return 0;
 }
-
+*/
 // Scale present-day precipitation field
 PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
   PetscErrorCode ierr;
@@ -148,7 +148,7 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
 
   if ((delta_T != NULL) && precipitation_correction) {
 //    // ... as in Pollard & De Conto (2012), Eqn (34b): 
-//    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(t + 0.5 * dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
+//    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
 
 //    // ... using a factor based on Clausius-Clapeyron:  
     if (precip_increase_per_degree_set){

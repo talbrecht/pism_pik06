@@ -33,7 +33,7 @@ public:
 
   virtual PetscErrorCode init(PISMVars &vars);
   virtual PetscErrorCode update(double my_t, double my_dt);
-  virtual PetscErrorCode precip_time_series(int i, int j, double *values);
+  //virtual PetscErrorCode precip_time_series(int i, int j, double *values);
   virtual PetscErrorCode mean_precipitation(IceModelVec2S &result);
 protected:
   bool precipitation_correction, precip_increase_per_degree_set, temp_huybrechts_dewolde99_set, temp_era_interim_set, temp_era_interim_sin_set;
