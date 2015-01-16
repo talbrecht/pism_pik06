@@ -63,24 +63,45 @@ PetscErrorCode PISMOceanKill::init(PISMVars &vars) {
   assert(mask != NULL);
   MaskQuery m(*mask);
 
-  IceModelVec2S thickness, *tmp;
+  bool okm_set;
+  ierr = PISMOptionsIsSet("-ocean_kill_mask", okm_set); CHKERRQ(ierr);
+
+  IceModelVec2S thickness, *tmp, okm;
 
   if (flag == false) {
     PetscPrintf(grid.com, "PISM ERROR: option -ocean_kill_file is required.\n");
     PISMEnd();
   } else {
-    ierr = verbPrintf(2, grid.com,
+
+    if (okm_set) {
+      ierr = okm.create(grid, "ocean_kill_mask", WITHOUT_GHOSTS); CHKERRQ(ierr);
+      ierr = okm.set_attrs("internal","mask specifying fixed calving front locations","", ""); CHKERRQ(ierr);
+      ierr = okm.regrid(filename, CRITICAL); CHKERRQ(ierr);
+      tmp = &okm;
+
+      ierr = verbPrintf(2, grid.com,
+        "* Option -ocean_kill seen: setting fixed calving front location using\n"
+        "  ocean_kill_mask from '%s'.\n",filename.c_str()); CHKERRQ(ierr);
+ 
+      ierr = okm.copy_to(m_ocean_kill_mask); CHKERRQ(ierr);
+      return 0;
+
+    }
+    else {
+
+      ierr = verbPrintf(2, grid.com,
        "  setting fixed calving front location using\n"
        "  ice thickness from '%s'.\n", filename.c_str()); CHKERRQ(ierr);
 
-    ierr = thickness.create(grid, "thk", WITHOUT_GHOSTS); CHKERRQ(ierr);
-    ierr = thickness.set_attrs("temporary", "land ice thickness",
+      ierr = thickness.create(grid, "thk", WITHOUT_GHOSTS); CHKERRQ(ierr);
+      ierr = thickness.set_attrs("temporary", "land ice thickness",
                                "m", "land_ice_thickness"); CHKERRQ(ierr);
-    thickness.metadata().set_double("valid_min", 0.0);
+      thickness.metadata().set_double("valid_min", 0.0);
 
-    ierr = thickness.regrid(filename, CRITICAL); CHKERRQ(ierr);
+      ierr = thickness.regrid(filename, CRITICAL); CHKERRQ(ierr);
 
-    tmp = &thickness;
+      tmp = &thickness;
+    }
   }
 
   ierr = m_ocean_kill_mask.begin_access(); CHKERRQ(ierr);
