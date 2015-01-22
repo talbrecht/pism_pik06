@@ -75,7 +75,7 @@ public:
   };
 private:
   IceModelVec2S shelfbtemp, shelfbmassflux;
-  IceModelVec2S *ice_thickness;
+  IceModelVec2S *ice_thickness, *bed_topography;
   IceModelVec2T *theta_ocean, *salinity_ocean;
 
   PetscErrorCode pointwise_update(const POGivenTHConstants &constants,
