@@ -118,6 +118,9 @@ PetscErrorCode POGivenTH::init(PISMVars &vars) {
   ice_thickness = dynamic_cast<IceModelVec2S*>(vars.get("land_ice_thickness"));
   if (ice_thickness == NULL) {SETERRQ(grid.com, 1, "ERROR: ice thickness is not available");}
 
+  bed_topography = dynamic_cast<IceModelVec2S*>(vars.get("bedrock_altitude"));
+  if (bed_topography == NULL) {SETERRQ(grid.com, 1, "ERROR: bed topography is not available");}
+
   ierr = theta_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
   ierr = salinity_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
 
@@ -203,6 +206,7 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   POGivenTHConstants c(config);
 
   ierr = ice_thickness->begin_access();  CHKERRQ(ierr);
+  ierr = bed_topography->begin_access();  CHKERRQ(ierr);
   ierr = theta_ocean->begin_access();    CHKERRQ(ierr);
   ierr = salinity_ocean->begin_access(); CHKERRQ(ierr);
   ierr = shelfbtemp.begin_access();      CHKERRQ(ierr);
@@ -216,10 +220,15 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
       double
         shelf_base_temperature_celsius = 0.0,
         shelf_base_mass_flux   = 0.0;
+
+      double 
+        shelfbaseelev = (c.ice_density / c.sea_water_density) * (*ice_thickness)(i,j),
+        zice = PetscMin(PetscAbs(shelfbaseelev),PetscAbs((*bed_topography)(i,j)));
+
       ierr = pointwise_update(c,
                               (*salinity_ocean)(i,j),
                               potential_temperature_celsius,
-                              (*ice_thickness)(i,j),
+                              zice,
                               &shelf_base_temperature_celsius,
                               &shelf_base_mass_flux); CHKERRQ(ierr);
 
@@ -233,6 +242,7 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   ierr = shelfbtemp.end_access();      CHKERRQ(ierr);
   ierr = salinity_ocean->end_access(); CHKERRQ(ierr);
   ierr = theta_ocean->end_access();    CHKERRQ(ierr);
+  ierr = bed_topography->end_access();  CHKERRQ(ierr);
   ierr = ice_thickness->end_access();  CHKERRQ(ierr);
 
   // convert mass flux from [m s-1] to [kg m-2 s-1]:
