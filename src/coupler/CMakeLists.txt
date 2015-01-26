@@ -13,6 +13,7 @@ add_library (pismboundary
   ./atmosphere/PA_paleo_precip.cc
   ./atmosphere/PAAnomaly.cc
   ./atmosphere/PAWeatherStation.cc
+  ./atmosphere/PATemperaturePIK.cc
   ./ocean/PISMOceanModel.cc
   ./ocean/POCache.cc
   ./ocean/POConstantPIK.cc

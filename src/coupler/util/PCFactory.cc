@@ -39,7 +39,7 @@
 #include "PAAnomaly.hh"
 #include "PACosineYearlyCycle.hh"
 #include "PAWeatherStation.hh"
-
+#include "PATemperaturePIK.hh" //NOTE included
 // ocean models:
 #include "POConstant.hh"
 #include "POConstantPIK.hh"
@@ -51,6 +51,7 @@
 #include "POCache.hh"
 #include "POGivenTH.hh" 
 #include "POGivenBMR.hh" //NOTE included
+
 
 
 // surface models:
@@ -114,10 +115,17 @@ static void create_pa_anomaly(IceGrid& g, const PISMConfig& conf,
   result = new PAAnomaly(g, conf, input);
 }
 
+//NOTE included
+static void create_pa_temperature_pik(IceGrid& g, const PISMConfig& conf, PISMAtmosphereModel* &result) {
+  result = new PATemperaturePIK(g, conf);
+}
+
+
 void PAFactory::add_standard_types() {
   add_model("given",             &create_pa_given);
   add_model("searise_greenland", &create_pa_searise_greenland);
   add_model("pik",               &create_pa_constant_pik);
+  add_model("pik_temp",          &create_pa_temperature_pik); //NOTE included
   add_model("yearly_cycle",      &create_pa_yearly_cycle);
   add_model("one_station",       &create_pa_one_station);
   set_default("given");
@@ -166,6 +174,12 @@ static void create_po_delta_SMB(IceGrid& g, const PISMConfig& conf, PISMOceanMod
 static void create_po_cache(IceGrid& g, const PISMConfig& conf, PISMOceanModel *input, POModifier* &result) {
   result = new POCache(g, conf, input);
 }
+//NOTE included
+//static void create_po_bmr(IceGrid& g, const PISMConfig& conf, PISMOceanModel *input, POModifier* &result) {
+//  result = new POGivenBMR(g, conf, input);
+//}
+
+
 
 //NOTE included
 static void create_po_bmr(IceGrid& g, const PISMConfig& conf, PISMOceanModel* &result) {
