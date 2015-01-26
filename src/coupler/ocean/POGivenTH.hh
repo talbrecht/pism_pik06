@@ -21,6 +21,7 @@
 
 #include "PGivenClimate.hh"
 #include "POModifier.hh"
+#include "Timeseries.hh"
 
 class POGivenTH : public PGivenClimate<POModifier,PISMOceanModel>
 {
@@ -73,6 +74,10 @@ public:
     double ice_thermal_diffusivity;
     bool limit_salinity_range;
   };
+protected:
+    bool ocean_th_deltaT_set;
+    Timeseries *delta_T;
+    double delta_T_factor, pmt_shift, ot_shift;
 private:
   IceModelVec2S shelfbtemp, shelfbmassflux;
   IceModelVec2S *ice_thickness, *bed_topography;
@@ -111,5 +116,6 @@ private:
 
   PetscErrorCode allocate_POGivenTH();
 };
+
 
 #endif /* _POGIVENTH_H_ */

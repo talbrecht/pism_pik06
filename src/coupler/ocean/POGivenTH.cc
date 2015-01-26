@@ -103,6 +103,45 @@ PetscErrorCode POGivenTH::allocate_POGivenTH() {
                                   "kg m-2 s-1", ""); CHKERRQ(ierr);
   ierr = shelfbmassflux.set_glaciological_units("kg m-2 year-1"); CHKERRQ(ierr);
   shelfbmassflux.write_in_glaciological_units = true;
+
+
+  // option for scalar forcing of ocean temperature
+  ierr = PISMOptionsIsSet("-ocean_th_deltaT", ocean_th_deltaT_set); CHKERRQ(ierr);
+
+  if (ocean_th_deltaT_set) {
+    bool delta_T_set;
+    std::string delta_T_file;
+
+    ierr = PISMOptionsString("-ocean_th_deltaT",
+                             "Specifies the ocean temperature offsets file to use with -ocean_th_deltaT",
+                             delta_T_file, delta_T_set); CHKERRQ(ierr);
+
+    ierr = verbPrintf(2, grid.com, 
+                      "  reading delta_T data from forcing file %s for -ocean_th_deltaT actions ...\n",
+                      delta_T_file.c_str());  CHKERRQ(ierr);
+
+    delta_T = new Timeseries(&grid, "delta_T",grid.config.get_string("time_dimension_name"));
+    ierr = delta_T->set_units("Kelvin", ""); CHKERRQ(ierr);
+    ierr = delta_T->set_dimension_units(grid.time->units_string(), ""); CHKERRQ(ierr);
+    ierr = delta_T->set_attr("long_name", "ocean temperature offsets"); CHKERRQ(ierr);
+    //ierr = delta_T->read(delta_T_file, grid.time->use_reference_date()); CHKERRQ(ierr);
+
+    PIO nc(grid.com, "netcdf3", grid.get_unit_system());
+    ierr = nc.open(delta_T_file, PISM_NOWRITE); CHKERRQ(ierr);
+    {
+      ierr = delta_T->read(nc, grid.time); CHKERRQ(ierr);
+    }
+    ierr = nc.close(); CHKERRQ(ierr);
+
+    bool delta_T_factor_set,pmt_shift_set,ot_shift_set;
+    delta_T_factor=1.0,pmt_shift=0.0,ot_shift=0.0;
+
+    ierr = PISMOptionsReal("-ocean_th_factor","ocean_th_factor set",delta_T_factor, delta_T_factor_set); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-pmt_shift","pmt shift set",pmt_shift, pmt_shift_set); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-ot_shift","ot shift set",ot_shift, ot_shift_set); CHKERRQ(ierr);
+  }
+
+
   return 0;
 }
 
@@ -194,6 +233,15 @@ PetscErrorCode POGivenTH::melange_back_pressure_fraction(IceModelVec2S &result) 
   return 0;
 }
 
+//* Evaluate the parameterization of the melting point temperature.
+/** The value returned is in degrees Celsius.
+ */
+static double melting_point_temperature(POGivenTH::POGivenTHConstants c,
+                                        double salinity, double ice_thickness) {
+  return c.a[0] * salinity + c.a[1] + c.a[2] * ice_thickness;
+}
+
+
 PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
 
   // Make sure that sea water salinity and sea water potential
@@ -214,16 +262,26 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
 
   for (PetscInt   i = grid.xs; i < grid.xs+grid.xm; ++i) {
     for (PetscInt j = grid.ys; j < grid.ys+grid.ym; ++j) {
+
+      double 
+        shelfbaseelev = (c.ice_density / c.sea_water_density) * (*ice_thickness)(i,j),
+        zice = PetscMin(PetscAbs(shelfbaseelev),PetscAbs((*bed_topography)(i,j)+sea_level));
+        //FIXME: sea_level is not updated
+
       // convert from Kelvin into Celsius:
       double potential_temperature_celsius = (*theta_ocean)(i,j) - 273.15;
+
+      if (delta_T != NULL && ocean_th_deltaT_set) {
+        double
+          pressure_melting_temperature = melting_point_temperature(c, (*salinity_ocean)(i,j), zice) + pmt_shift,
+          ocean_temperature = (*theta_ocean)(i,j) - 273.15 + delta_T_factor*(*delta_T)(m_t + 0.5*m_dt) + ot_shift,
+          potential_temperature_celsius = PetscMax( ocean_temperature, pressure_melting_temperature);
+          (*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
+      } 
 
       double
         shelf_base_temperature_celsius = 0.0,
         shelf_base_mass_flux   = 0.0;
-
-      double 
-        shelfbaseelev = (c.ice_density / c.sea_water_density) * (*ice_thickness)(i,j),
-        zice = PetscMin(PetscAbs(shelfbaseelev),PetscAbs((*bed_topography)(i,j)));
 
       ierr = pointwise_update(c,
                               (*salinity_ocean)(i,j),
@@ -251,14 +309,6 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   return 0;
 }
 
-
-//* Evaluate the parameterization of the melting point temperature.
-/** The value returned is in degrees Celsius.
- */
-static double melting_point_temperature(POGivenTH::POGivenTHConstants c,
-                                        double salinity, double ice_thickness) {
-  return c.a[0] * salinity + c.a[1] + c.a[2] * ice_thickness;
-}
 
 /** Melt rate, obtained by solving the salt flux balance equation.
  *
