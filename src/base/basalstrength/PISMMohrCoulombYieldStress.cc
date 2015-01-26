@@ -337,6 +337,14 @@ PetscErrorCode PISMMohrCoulombYieldStress::update(double my_t, double my_dt) {
     ierr = hydrology->overburden_pressure(Po); CHKERRQ(ierr);
   }
 
+  bool tauc_old_set,till_pf_fraction_set;
+  ierr = PISMOptionsIsSet("-tauc_old", "Compute tauc in the way as it was used up to stable0.5",tauc_old_set); CHKERRQ(ierr);
+  double till_pw_fraction = 0.85;
+  if (tauc_old_set){
+    ierr = PISMOptionsReal("-plastic_pwfrac", "till pore water fraction", till_pw_fraction, till_pf_fraction_set); CHKERRQ(ierr);
+    ierr = verbPrintf(3, grid.com, "!!!!! ppwfrac set to %f...\n",till_pw_fraction); CHKERRQ(ierr);
+  }
+
   ierr = mask->begin_access(); CHKERRQ(ierr);
   ierr = tauc.begin_access(); CHKERRQ(ierr);
   ierr = tillwat.begin_access(); CHKERRQ(ierr);
@@ -361,8 +369,12 @@ PetscErrorCode PISMMohrCoulombYieldStress::update(double my_t, double my_dt) {
         } else {
           water = tillwat(i,j); // usual case
         }
-        Ntil = delta * Po(i,j) * pow(10.0, e0overCc * (1.0 - (water / tillwat_max)));
-        Ntil = PetscMin(Po(i,j), Ntil);
+        if (tauc_old_set){
+          Ntil = Po(i,j) * (1.0 - till_pw_fraction * (water / tillwat_max));
+        } else {
+          Ntil = delta * Po(i,j) * pow(10.0, e0overCc * (1.0 - (water / tillwat_max)));
+          Ntil = PetscMin(Po(i,j), Ntil);
+        }
         tauc(i, j) = c0 + Ntil * tan((M_PI/180.0) * till_phi(i, j));
       }
     }
@@ -505,6 +517,14 @@ PetscErrorCode PISMMohrCoulombYieldStress::tauc_to_phi() {
     ierr = hydrology->overburden_pressure(Po); CHKERRQ(ierr);
   }
 
+  bool tauc_old_set,till_pf_fraction_set;
+  ierr = PISMOptionsIsSet("-tauc_old", "Compute tauc in the way as it was used up to stable0.5",tauc_old_set); CHKERRQ(ierr);
+  double till_pw_fraction=0.84;
+  if (tauc_old_set){
+    ierr = PISMOptionsReal("-plastic_pwfrac", "till pore water fraction", till_pw_fraction, till_pf_fraction_set); CHKERRQ(ierr);
+    ierr = verbPrintf(2, grid.com, "!!!!! tauc_to_phi ppwfrac set to %f...\n",till_pw_fraction); CHKERRQ(ierr);
+  }
+
   ierr = mask->begin_access(); CHKERRQ(ierr);
   ierr = tauc.begin_access(); CHKERRQ(ierr);
   ierr = tillwat.begin_access(); CHKERRQ(ierr);
@@ -519,7 +539,12 @@ PetscErrorCode PISMMohrCoulombYieldStress::tauc_to_phi() {
       } else if (m.ice_free(i, j)) {
         // no change
       } else { // grounded and there is some ice
-        Ntil = delta * Po(i,j) * pow(10.0, e0overCc * (1.0 - (tillwat(i,j) / tillwat_max)));
+        if (tauc_old_set){
+          Ntil = Po(i,j) * (1.0 - till_pw_fraction * (tillwat(i,j) / tillwat_max)); 
+          Ntil = PetscMax(Ntil, 0.01);
+        } else {
+          Ntil = delta * Po(i,j) * pow(10.0, e0overCc * (1.0 - (tillwat(i,j) / tillwat_max)));
+        }
         till_phi(i, j) = 180.0/M_PI * atan((tauc(i, j) - c0) / Ntil);
       }
     }
