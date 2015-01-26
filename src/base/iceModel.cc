@@ -130,6 +130,8 @@ void IceModel::reset_counters() {
   nonneg_rule_flux_cumulative        = 0;
   sub_shelf_ice_flux_cumulative      = 0;
   surface_ice_flux_cumulative        = 0;
+  surface_ice_flux_cumulative_sheet  = 0;
+  surface_ice_flux_cumulative_shelf  = 0;
   sum_divQ_SIA_cumulative            = 0;
   sum_divQ_SSA_cumulative            = 0;
   Href_to_H_flux_cumulative          = 0;

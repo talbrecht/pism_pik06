@@ -1,4 +1,4 @@
-// Copyright (C) 2004-2014 Jed Brown, Ed Bueler and Constantine Khroulev
+// Copyright (C) 2004-2015 PISM Authors
 //
 // This file is part of PISM.
 //
@@ -500,6 +500,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
     proc_grounded_basal_ice_flux  = 0,
     proc_nonneg_rule_flux         = 0,
     proc_sub_shelf_ice_flux       = 0,
+    proc_surface_ice_flux_sheet   = 0,
+    proc_surface_ice_flux_shelf   = 0,
     proc_sum_divQ_SIA             = 0,
     proc_sum_divQ_SSA             = 0,
     proc_surface_ice_flux         = 0,
@@ -509,6 +511,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
     total_grounded_basal_ice_flux = 0,
     total_nonneg_rule_flux        = 0,
     total_sub_shelf_ice_flux      = 0,
+    total_surface_ice_flux_sheet  = 0,
+    total_surface_ice_flux_shelf  = 0,
     total_sum_divQ_SIA            = 0,
     total_sum_divQ_SSA            = 0,
     total_surface_ice_flux        = 0;
@@ -616,6 +620,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
       // Note: here we convert surface mass balance from [kg m-2 s-1] to [m s-1]:
       double
         surface_mass_balance = climatic_mass_balance(i, j) / ice_density, // units: [m s-1]
+        surface_mass_balance_sheet = 0.0,
+        surface_mass_balance_shelf = 0.0,
         meltrate_grounded    = 0.0, // units: [m s-1]
         meltrate_floating    = 0.0, // units: [m s-1]
         H_to_Href_flux       = 0.0, // units: [m]
@@ -628,6 +634,27 @@ PetscErrorCode IceModel::massContExplicitStep() {
         // [m s-1] already
         meltrate_grounded = basal_melt_rate(i, j);
       }
+
+      if (mask.grounded_ice(i, j)){
+        if (climatic_mass_balance(i, j) < 0.0 && (fabs(climatic_mass_balance(i, j)) > (ice_thickness(i, j) / dt))){ // i.e. if there is more ice melted than available, report only the available ice as surface mass balance change
+          surface_mass_balance_sheet = ice_thickness(i, j) / dt;
+        } else {  
+          surface_mass_balance_sheet = climatic_mass_balance(i, j);
+        }
+      } else {
+        surface_mass_balance_sheet = 0.0;
+      }
+
+      if (mask.floating_ice(i, j)){
+        if (climatic_mass_balance(i, j) < 0.0 && (fabs(climatic_mass_balance(i, j)) > (ice_thickness(i, j) / dt))){ // i.e. if there is more ice melted than available, report only the available ice as surface mass balance change
+          surface_mass_balance_shelf = ice_thickness(i, j) / dt;
+        } else {  
+         surface_mass_balance_shelf = climatic_mass_balance(i, j);
+        }
+      } else {
+        surface_mass_balance_shelf = 0.0;
+      }
+
 
       planeStar<double> Q, v;
       cell_interface_fluxes(dirichlet_bc, i, j,
@@ -768,6 +795,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
         proc_grounded_basal_ice_flux += - meltrate_grounded    * meter_per_s_to_kg;
         proc_sub_shelf_ice_flux      += - meltrate_floating    * meter_per_s_to_kg;
         proc_surface_ice_flux        +=   surface_mass_balance * meter_per_s_to_kg;
+        proc_surface_ice_flux_sheet  +=   surface_mass_balance_sheet * meter_per_s_to_kg;
+        proc_surface_ice_flux_shelf  +=   surface_mass_balance_shelf * meter_per_s_to_kg;
         proc_sum_divQ_SIA            += - divQ_SIA             * meter_per_s_to_kg;
         proc_sum_divQ_SSA            += - divQ_SSA             * meter_per_s_to_kg;
         proc_nonneg_rule_flux        +=   nonneg_rule_flux     * meter_to_kg;
@@ -828,6 +857,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
     ierr = PISMGlobalSum(&proc_nonneg_rule_flux,   &total_nonneg_rule_flux,   grid.com); CHKERRQ(ierr);
     ierr = PISMGlobalSum(&proc_sub_shelf_ice_flux, &total_sub_shelf_ice_flux, grid.com); CHKERRQ(ierr);
     ierr = PISMGlobalSum(&proc_surface_ice_flux,   &total_surface_ice_flux,   grid.com); CHKERRQ(ierr);
+    ierr = PISMGlobalSum(&proc_surface_ice_flux_sheet,   &total_surface_ice_flux_sheet,   grid.com); CHKERRQ(ierr);
+    ierr = PISMGlobalSum(&proc_surface_ice_flux_shelf,   &total_surface_ice_flux_shelf,   grid.com); CHKERRQ(ierr);
     ierr = PISMGlobalSum(&proc_sum_divQ_SIA,       &total_sum_divQ_SIA,       grid.com); CHKERRQ(ierr);
     ierr = PISMGlobalSum(&proc_sum_divQ_SSA,       &total_sum_divQ_SSA,       grid.com); CHKERRQ(ierr);
     ierr = PISMGlobalSum(&proc_Href_to_H_flux,     &total_Href_to_H_flux,     grid.com); CHKERRQ(ierr);
@@ -836,6 +867,8 @@ PetscErrorCode IceModel::massContExplicitStep() {
     grounded_basal_ice_flux_cumulative += total_grounded_basal_ice_flux;
     sub_shelf_ice_flux_cumulative      += total_sub_shelf_ice_flux;
     surface_ice_flux_cumulative        += total_surface_ice_flux;
+    surface_ice_flux_cumulative_sheet  += total_surface_ice_flux_sheet;
+    surface_ice_flux_cumulative_shelf  += total_surface_ice_flux_shelf;
     sum_divQ_SIA_cumulative            += total_sum_divQ_SIA;
     sum_divQ_SSA_cumulative            += total_sum_divQ_SSA;
     nonneg_rule_flux_cumulative        += total_nonneg_rule_flux;

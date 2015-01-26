@@ -84,6 +84,8 @@ PetscErrorCode PSTemperatureIndex::allocate_PSTemperatureIndex() {
     ierr = PISMOptionsInt("-pdd_sd_reference_year",
                           "Standard deviation data reference year",
                           sd_ref_year, sd_ref_year_set); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-pdd_factor_ice", "PDD ice factor",
+                           base_ddf.ice, pSet); CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
