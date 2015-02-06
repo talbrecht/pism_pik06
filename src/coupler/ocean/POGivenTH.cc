@@ -139,6 +139,11 @@ PetscErrorCode POGivenTH::allocate_POGivenTH() {
     ierr = PISMOptionsReal("-ocean_th_factor","ocean_th_factor set",delta_T_factor, delta_T_factor_set); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-pmt_shift","pmt shift set",pmt_shift, pmt_shift_set); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-ot_shift","ot shift set",ot_shift, ot_shift_set); CHKERRQ(ierr);
+
+    // ocean_temp
+    ierr = ocean_temp.create(grid, "ocean_temp", WITHOUT_GHOSTS); CHKERRQ(ierr);
+    ierr = ocean_temp.set_attrs("climate_forcing","ocean temperature below ice shelf base","Celsius", ""); CHKERRQ(ierr);
+
   }
 
 
@@ -210,6 +215,12 @@ PetscErrorCode POGivenTH::write_variables(std::set<std::string> vars, const PIO&
     ierr = shelfbmassflux.write(nc); CHKERRQ(ierr);
   }
 
+  if (ocean_th_deltaT_set) {
+    if (set_contains(vars, "ocean_temp")) {  
+      ierr = ocean_temp.write(nc); CHKERRQ(ierr); 
+    }
+  }
+
   return 0;
 }
 
@@ -259,6 +270,9 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   ierr = salinity_ocean->begin_access(); CHKERRQ(ierr);
   ierr = shelfbtemp.begin_access();      CHKERRQ(ierr);
   ierr = shelfbmassflux.begin_access();  CHKERRQ(ierr);
+  ierr = ocean_temp.begin_access();      CHKERRQ(ierr);
+
+  //ierr = verbPrintf(2, grid.com,"!!!! delta_T=%f, delta_S=%f...\n",(*delta_T)(m_t + 0.5*m_dt),sea_level);  CHKERRQ(ierr);
 
   for (PetscInt   i = grid.xs; i < grid.xs+grid.xm; ++i) {
     for (PetscInt j = grid.ys; j < grid.ys+grid.ym; ++j) {
@@ -276,7 +290,9 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
           pressure_melting_temperature = melting_point_temperature(c, (*salinity_ocean)(i,j), zice) + pmt_shift,
           ocean_temperature = (*theta_ocean)(i,j) - 273.15 + delta_T_factor*(*delta_T)(m_t + 0.5*m_dt) + ot_shift,
           potential_temperature_celsius = PetscMax( ocean_temperature, pressure_melting_temperature);
-          (*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
+          ocean_temp(i,j) = potential_temperature_celsius;
+          //ocean_temp(i,j) = ocean_temperature;
+          //(*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
       } 
 
       double
@@ -302,6 +318,7 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   ierr = theta_ocean->end_access();    CHKERRQ(ierr);
   ierr = bed_topography->end_access();  CHKERRQ(ierr);
   ierr = ice_thickness->end_access();  CHKERRQ(ierr);
+  ierr = ocean_temp.end_access();      CHKERRQ(ierr);
 
   // convert mass flux from [m s-1] to [kg m-2 s-1]:
   ierr = shelfbmassflux.scale(config.get("ice_density")); CHKERRQ(ierr);
