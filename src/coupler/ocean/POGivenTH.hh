@@ -78,6 +78,7 @@ protected:
     bool ocean_th_deltaT_set;
     Timeseries *delta_T;
     double delta_T_factor, pmt_shift, ot_shift;
+    IceModelVec2S ocean_temp;
 private:
   IceModelVec2S shelfbtemp, shelfbmassflux;
   IceModelVec2S *ice_thickness, *bed_topography;
