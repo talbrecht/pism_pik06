@@ -140,11 +140,11 @@ PetscErrorCode POGivenTH::allocate_POGivenTH() {
     ierr = PISMOptionsReal("-pmt_shift","pmt shift set",pmt_shift, pmt_shift_set); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-ot_shift","ot shift set",ot_shift, ot_shift_set); CHKERRQ(ierr);
 
-    // ocean_temp
-    ierr = ocean_temp.create(grid, "ocean_temp", WITHOUT_GHOSTS); CHKERRQ(ierr);
-    ierr = ocean_temp.set_attrs("climate_forcing","ocean temperature below ice shelf base","Celsius", ""); CHKERRQ(ierr);
-
   }
+
+  // ocean_temp
+  ierr = ocean_temp.create(grid, "ocean_temp", WITHOUT_GHOSTS); CHKERRQ(ierr);
+  ierr = ocean_temp.set_attrs("climate_forcing","ocean temperature below ice shelf base","Celsius", ""); CHKERRQ(ierr);
 
 
   return 0;
@@ -290,10 +290,12 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
           pressure_melting_temperature = melting_point_temperature(c, (*salinity_ocean)(i,j), zice) + pmt_shift,
           ocean_temperature = (*theta_ocean)(i,j) - 273.15 + delta_T_factor*(*delta_T)(m_t + 0.5*m_dt) + ot_shift,
           potential_temperature_celsius = PetscMax( ocean_temperature, pressure_melting_temperature);
-          ocean_temp(i,j) = potential_temperature_celsius;
+          //ocean_temp(i,j) = potential_temperature_celsius;
           //ocean_temp(i,j) = ocean_temperature;
           //(*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
       } 
+
+      ocean_temp(i,j) = potential_temperature_celsius;
 
       double
         shelf_base_temperature_celsius = 0.0,
