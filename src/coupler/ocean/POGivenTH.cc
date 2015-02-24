@@ -288,11 +288,11 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
       if (delta_T != NULL && ocean_th_deltaT_set) {
         double
           pressure_melting_temperature = melting_point_temperature(c, (*salinity_ocean)(i,j), zice) + pmt_shift,
-          ocean_temperature = (*theta_ocean)(i,j) - 273.15 + delta_T_factor*(*delta_T)(m_t + 0.5*m_dt) + ot_shift,
-          potential_temperature_celsius = PetscMax( ocean_temperature, pressure_melting_temperature);
-          //ocean_temp(i,j) = potential_temperature_celsius;
-          //ocean_temp(i,j) = ocean_temperature;
-          //(*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
+          ocean_temperature = (*theta_ocean)(i,j) - 273.15 + delta_T_factor*(*delta_T)(m_t + 0.5*m_dt) + ot_shift;
+        potential_temperature_celsius = PetscMax( ocean_temperature, pressure_melting_temperature);
+        //ocean_temp(i,j) = potential_temperature_celsius;
+        //ocean_temp(i,j) = ocean_temperature;
+        //(*theta_ocean)(i,j) = potential_temperature_celsius + 273.15;
       } 
 
       ocean_temp(i,j) = potential_temperature_celsius;
