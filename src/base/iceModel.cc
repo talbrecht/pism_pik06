@@ -244,6 +244,14 @@ PetscErrorCode IceModel::createVecs() {
     ierr = variables.add(tau3); CHKERRQ(ierr);
   }
 
+    if (config.get_flag("drainageBasins")) {
+    // BasinMask
+    ierr = vBasinMask.create(grid, "basins", WITH_GHOSTS, WIDE_STENCIL); CHKERRQ(ierr);
+    ierr = vBasinMask.set_attrs("model_state", "drainage basins",
+          "", "drainage_basins"); CHKERRQ(ierr);
+    ierr = variables.add(vBasinMask); CHKERRQ(ierr);
+  }
+
   // ice upper surface elevation
   ierr = ice_surface_elevation.create(grid, "usurf", WITH_GHOSTS, WIDE_STENCIL); CHKERRQ(ierr);
   ierr = ice_surface_elevation.set_attrs("diagnostic", "ice upper surface elevation",

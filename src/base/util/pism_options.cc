@@ -800,6 +800,8 @@ PetscErrorCode set_config_from_options(MPI_Comm com, PISMConfig &config) {
     config.set_flag_from_option("nu_bedrock_set", true);
   }
 
+  ierr = config.flag_from_option("drainageBasins", "drainageBasins"); CHKERRQ(ierr);
+  
   // fracture density
   ierr = config.flag_from_option("fractures", "do_fracture_density"); CHKERRQ(ierr);
   ierr = config.flag_from_option("write_fd_fields", "write_fd_fields"); CHKERRQ(ierr);

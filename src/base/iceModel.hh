@@ -248,6 +248,7 @@ protected:
     vFT,    //!< fracture toughness
     bedtoptemp,     //!< temperature seen by bedrock thermal layer, if present; no ghosts
     vHref,          //!< accumulated mass advected to a partially filled grid cell
+    vBasinMask, //! < mask for distinguishing drainage basins, used by -oceanboxmodel
     climatic_mass_balance,              //!< accumulation/ablation rate; no ghosts
     climatic_mass_balance_cumulative,    //!< cumulative climatic_mass_balance
     grounded_basal_flux_2D_cumulative, //!< grounded basal (melt/freeze-on) cumulative flux

@@ -132,6 +132,11 @@ PetscErrorCode IceModel::bootstrap_2d(std::string filename) {
   ierr = geothermal_flux.regrid(filename, OPTIONAL, config.get("bootstrapping_geothermal_flux_value_no_var")); CHKERRQ(ierr);
   ierr = bed_uplift_rate.regrid(filename, OPTIONAL, config.get("bootstrapping_uplift_value_no_var")); CHKERRQ(ierr);
 
+
+  if (config.get_flag("drainageBasins")) {
+    ierr =    vBasinMask.regrid(filename, OPTIONAL, config.get("bootstrapping_basinmask_value_no_var")); CHKERRQ(ierr);
+  }
+
   ierr = ice_thickness.regrid(filename, OPTIONAL, config.get("bootstrapping_H_value_no_var")); CHKERRQ(ierr);
   // check the range of the ice thickness
   {
