@@ -58,6 +58,9 @@ netcdf pism_config {
     pism_config:part_grid_reduce_frontal_thickness = "no";
     pism_config:part_grid_reduce_frontal_thickness_doc = "Reduce the threshold ice thickness at ice fronts using a van der Veen flowline analytical profile";
 
+    pism_config:drainageBasins = "no";
+    pism_config:drainageBasins_doc = "read drainage basins from Rignot et al., 2011";
+
     pism_config:kill_icebergs = "no";
     pism_config:kill_icebergs_doc = "identify and kill detached ice-shelf areas";
 
@@ -141,6 +144,10 @@ netcdf pism_config {
 
     pism_config:bootstrapping_tillwat_value_no_var = 0.0;
     pism_config:bootstrapping_tillwat_value_no_var_doc = "m; till water thickness value to use if variable tillwat is absent in bootstrapping file";
+
+    pism_config:bootstrapping_basinmask_value_no_var = 0.0;
+    pism_config:bootstrapping_basinmask_value_no_var_doc = "no units, mask indicates drainage basin for Antarctica, for use in oceanboxmodel";
+
 
     pism_config:bootstrapping_bwat_value_no_var = 0.0;
     pism_config:bootstrapping_bwat_value_no_var_doc = "m; till water thickness value to use if variable tillwat is absent in bootstrapping file";

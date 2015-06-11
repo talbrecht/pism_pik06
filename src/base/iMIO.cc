@@ -435,6 +435,23 @@ PetscErrorCode IceModel::initFromFile(std::string filename) {
     }
   }
 
+  // check if the input file has basins; set its pism_intent to "diagnostic" and
+  // set the field itself to 0 if it is not present
+  if (config.get_flag("drainageBasins")) {
+    bool exists;
+    ierr = nc.inq_var("basins", exists); CHKERRQ(ierr);
+    ierr = vBasinMask.read(filename, last_record); CHKERRQ(ierr);
+
+    if (!exists) {
+      ierr = verbPrintf(2, grid.com,
+        "PISM WARNING: basins for -oceanboxmodel not found in '%s'. Setting it to zero...\n",
+                        filename.c_str()); CHKERRQ(ierr);
+      //ierr = vBasinMask.set_attr("pism_intent", "diagnostic"); CHKERRQ(ierr);
+      //ierr = vBasinMask.set_attr("pism_intent", "model_state"); CHKERRQ(ierr);
+      ierr = vBasinMask.set(0.0); CHKERRQ(ierr);
+    }
+  }
+
 
   // Initialize the enthalpy field by reading from a file or by using
   // temperature and liquid water fraction, or by using temperature

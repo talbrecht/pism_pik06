@@ -51,7 +51,7 @@
 #include "POCache.hh"
 #include "POGivenTH.hh" 
 #include "POGivenBMR.hh" //NOTE included
-
+#include "POoceanboxmodel.hh"  //NOTE included
 
 
 // surface models:
@@ -171,6 +171,11 @@ static void create_po_delta_SMB(IceGrid& g, const PISMConfig& conf, PISMOceanMod
   result = new PO_delta_SMB(g, conf, input);
 }
 
+//NOTE included
+static void create_po_oceanboxmodel(IceGrid& g, const PISMConfig& conf, PISMOceanModel* &result) {
+  result = new POoceanboxmodel(g, conf);
+}
+
 static void create_po_cache(IceGrid& g, const PISMConfig& conf, PISMOceanModel *input, POModifier* &result) {
   result = new POCache(g, conf, input);
 }
@@ -193,6 +198,7 @@ void POFactory::add_standard_types() {
   add_model("pik",      &create_po_pik);
   add_model("th",       &create_po_th);
   add_model("bmr",      &create_po_bmr); //NOTE: included
+  add_model("oceanboxmodel",      &create_po_oceanboxmodel); //NOTE: included
   set_default("constant");
 
   add_modifier("delta_SL",  &create_po_delta_SL);
