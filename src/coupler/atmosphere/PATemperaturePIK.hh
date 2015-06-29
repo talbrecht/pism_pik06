@@ -40,6 +40,7 @@ protected:
   PetscReal precip_increase_per_degree;
   Timeseries *delta_T;
   IceModelVec2S *lat, *surfelev;
+
 };
 
 

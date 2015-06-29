@@ -35,6 +35,7 @@ PATemperaturePIK::PATemperaturePIK(IceGrid &g, const PISMConfig &conf)
 {
     precipitation_correction = false;
     delta_T = NULL;
+    //option_prefix   = "-atmosphere_pik_temp";
 }
 
 PATemperaturePIK::~PATemperaturePIK() 
@@ -44,13 +45,40 @@ PATemperaturePIK::~PATemperaturePIK()
 
 PetscErrorCode PATemperaturePIK::init(PISMVars &vars) {
   PetscErrorCode ierr;
+  bool do_regrid = true;
+  int start = -1;
+  bool bc_file_set = false;
 
   m_t = m_dt = GSL_NAN;  // every re-init restarts the clock
 
   ierr = verbPrintf(2, grid.com,
      "* Initializing the atmosphere model PATemperaturePIK.\n"); CHKERRQ(ierr);
 
-  ierr = PAYearlyCycle::init(vars); CHKERRQ(ierr);
+
+
+  // try to read precipitation from boundary forcing file, not from initfile or backupfile, to avoid jumps after restart 
+  std::string option_prefix   = "-atmosphere_pik_temp";
+  std::string precip_file;
+  ierr = PISMOptionsString(option_prefix + "_file",
+                               "Specifies a file with boundary conditions",
+                               precip_file, bc_file_set); CHKERRQ(ierr);
+
+  if (bc_file_set == false) {
+    ierr = PAYearlyCycle::init(vars); CHKERRQ(ierr); }
+  
+  else {
+    ierr = verbPrintf(2, grid.com,
+                    "    reading mean annual ice-equivalent precipitation rate 'precipitation'\n"
+                    "    from forcing file %s ... \n",
+                    precip_file.c_str()); CHKERRQ(ierr); 
+    if (do_regrid) {
+      ierr = precipitation.regrid(precip_file, CRITICAL); CHKERRQ(ierr); // fails if not found!
+    } else {
+      ierr = precipitation.read(precip_file, start); CHKERRQ(ierr); // fails if not found!
+    }
+  }
+
+
 
   // initialize pointers to fields the parameterization depends on:
   surfelev = dynamic_cast<IceModelVec2S*>(vars.get("surface_altitude"));
@@ -146,7 +174,12 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
 
   ierr = PAYearlyCycle::mean_precipitation(result); CHKERRQ(ierr);
 
+
   if ((delta_T != NULL) && precipitation_correction) {
+
+      //ierr = verbPrintf(2, grid.com,
+      //              "      Precipitation is increased by %1.1f percent per degree of warming\n", (precip_increase_per_degree - 1.0) * 100); CHKERRQ(ierr);
+
 //    // ... as in Pollard & De Conto (2012), Eqn (34b): 
 //    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
 
@@ -173,6 +206,7 @@ if (lat->metadata().has_attribute("missing_at_bootstrap")) {
     CHKERRQ(ierr);
     PISMEnd();
   }
+
 
 
   if ((fabs(my_t - m_t) < 1e-12) &&
@@ -242,6 +276,18 @@ if (lat->metadata().has_attribute("missing_at_bootstrap")) {
   ierr = lat_degN.end_access(); CHKERRQ(ierr);
   ierr = air_temp_mean_annual.end_access();  CHKERRQ(ierr);
   ierr = air_temp_mean_july.end_access();  CHKERRQ(ierr);
+
+
+
+  // make sure that precipitation is scaled according to delta_T, even if surface temperatures are not (without modifier delta_T) 
+  if ((delta_T != NULL) && precipitation_correction) {
+    ierr = PATemperaturePIK::mean_precipitation(precipitation); CHKERRQ(ierr);
+  }
+
+
+
+
+
 
   return 0;
 }
