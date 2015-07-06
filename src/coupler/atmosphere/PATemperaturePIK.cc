@@ -177,18 +177,59 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
 
   if ((delta_T != NULL) && precipitation_correction) {
 
+    const double secpera=31556926.0;
+    bool do_regrid = true;
+    int start = -1;
+    bool bc_file_set = false;
+
+    // try to read precipitation from boundary forcing file, not from initfile or backupfile, to avoid jumps after restart 
+    std::string option_prefix   = "-atmosphere_pik_temp";
+    std::string precip_file;
+    ierr = PISMOptionsString(option_prefix + "_file",
+                               "Specifies a file with boundary conditions",
+                               precip_file, bc_file_set); CHKERRQ(ierr);
+
+    if (bc_file_set == false) {
+
+      ierr = find_pism_input(precip_file, do_regrid, start); CHKERRQ(ierr);
+
+      ierr = verbPrintf(2, grid.com,
+                    "    reading mean annual ice-equivalent precipitation rate 'precipitation'\n"
+                    "    from input file %s ... \n",
+                    precip_file.c_str()); CHKERRQ(ierr); 
+
+    }
+  
+    else {
+      ierr = verbPrintf(2, grid.com,
+                    "    reading mean annual ice-equivalent precipitation rate 'precipitation'\n"
+                    "    from forcing file %s ... \n",
+                    precip_file.c_str()); CHKERRQ(ierr); 
+
+    }
+
+
+    if (do_regrid) {
+      ierr = result.regrid(precip_file, CRITICAL); CHKERRQ(ierr); // fails if not found!
+    } else {
+      ierr = result.read(precip_file, start); CHKERRQ(ierr); // fails if not found!
+    }
+
+
       //ierr = verbPrintf(2, grid.com,
       //              "      Precipitation is increased by %1.1f percent per degree of warming\n", (precip_increase_per_degree - 1.0) * 100); CHKERRQ(ierr);
 
-//    // ... as in Pollard & De Conto (2012), Eqn (34b): 
-//    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
+      // ... as in Pollard & De Conto (2012), Eqn (34b): 
+      //    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
 
-//    // ... using a factor based on Clausius-Clapeyron:  
+    // ... using a factor based on Clausius-Clapeyron:  
     if (precip_increase_per_degree_set){
       ierr = result.scale(pow (precip_increase_per_degree, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by factor^(DeltaT), i.e., ((factor - 1.0)+ 100) PERCENT precip increase per degree
-    }else{
+    }
+    else{
       ierr = result.scale(pow (1.05, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 1.05^(DeltaT), i.e., 5% precip increase per degree, DEFAULT CASE
     }
+
   }
 
   return 0;
@@ -278,15 +319,9 @@ if (lat->metadata().has_attribute("missing_at_bootstrap")) {
   ierr = air_temp_mean_july.end_access();  CHKERRQ(ierr);
 
 
-
-  // make sure that precipitation is scaled according to delta_T, even if surface temperatures are not (without modifier delta_T) 
   if ((delta_T != NULL) && precipitation_correction) {
-    ierr = PATemperaturePIK::mean_precipitation(precipitation); CHKERRQ(ierr);
+   ierr = PATemperaturePIK::mean_precipitation(precipitation); CHKERRQ(ierr);
   }
-
-
-
-
 
 
   return 0;
