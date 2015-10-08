@@ -257,14 +257,18 @@ PetscErrorCode POoceanboxmodel::init(PISMVars &vars) {
   basins = dynamic_cast<IceModelVec2S*>(vars.get("drainage_basins")); //if option drainageBasins set
   if (!basins) { SETERRQ(grid.com, 1, "ERROR: drainage basins is not available"); }
 
+  bool omeans_set;
+  ierr = PISMOptionsIsSet("-ocean_means", omeans_set); CHKERRQ(ierr);
+  //if (!omeans_set) {
 
-  ierr = theta_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
-  ierr = salinity_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
+    ierr = theta_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
+    ierr = salinity_ocean->init(filename, bc_period, bc_reference_time); CHKERRQ(ierr);
 
-  // read time-independent data right away:
-  if (theta_ocean->get_n_records() == 1 && salinity_ocean->get_n_records() == 1) {
-    ierr = update(grid.time->current(), 0); CHKERRQ(ierr); // dt is irrelevant
-  }
+    // read time-independent data right away:
+    if (theta_ocean->get_n_records() == 1 && salinity_ocean->get_n_records() == 1) {
+      ierr = update(grid.time->current(), 0); CHKERRQ(ierr); // dt is irrelevant
+    }
+  //}
 
   POBMConstants cc(config);
   ierr = initBasinsOptions(cc); CHKERRQ(ierr);
@@ -335,24 +339,58 @@ PetscErrorCode POoceanboxmodel::initBasinsOptions(const POBMConstants &cc) {
   value_C = cc.value_C;
   ierr = PISMOptionsReal("-value_C","-value_C",value_C, value_C_set); CHKERRQ(ierr);
 
+  ///////////////////////////////////////////////////////////////////////////////////
+  // data have been calculated previously for the 18 Rignot basins
+  const PetscScalar Toc_base_schmidtko[18] = {0.0,271.56415203,271.63356482,271.42074233,271.46720524,272.30038929,271.52821139,271.5440751,271.58201494,272.90159695,273.61058862,274.19203524,274.32083917,272.55938554,271.35349906,271.39337366,271.49926019,271.49473924}; //Schmidtko
+  const PetscScalar Soc_base_schmidtko[18] = {0.0,34.49308909,34.50472554,34.70187911,34.65306507,34.7137078,34.74817136,34.89206844,34.78056731,34.60528314,34.72521443,34.86210624,34.83836297,34.73392011,34.83617088,34.82137147,34.69477334,34.48145265}; //Schmidtko
+
+  const PetscScalar Toc_base_woa[18] = {0.0,272.28351693,272.10101401,271.65965597,271.50766979,273.02732277,272.12473624,271.79505722,271.93548261,273.37866926,272.98126135,273.73564726,273.95971315,273.02383769,272.56732024,271.75152607,271.93962932,272.46601985}; //world ocean atlas
+  const PetscScalar Soc_base_woa[18] = {0.0,34.48230812,34.46499742,34.51939747,34.40695979,34.62947893,34.59932424,34.77118004,34.71666183,34.54603987,34.44824601,34.62416923,34.57034648,34.60459029,34.68356516,34.67159838,34.62308218,34.49961882}; //World Ocean Atlas
+
+  bool ocean_mean_set;
+  std::string data_input;
+  ierr = PISMOptionsString("-ocean_means", "Input data name",
+                             data_input, ocean_mean_set); CHKERRQ(ierr);
+
+  /////////////////////////////////////////////////////////////////////////////////////
+
   for(int k=0;k<numberOfBasins;k++) {
-      Toc_base_vec[k] = cc.T_dummy; //dummy, FIXME why these values? 
-      Soc_base_vec[k] = cc.S_dummy; //dummy
+      if (ocean_mean_set){
+        if (data_input=="schmidtko"){
+          Toc_base_vec[k] = Toc_base_schmidtko[k] - 273.15;
+          Soc_base_vec[k] = Soc_base_schmidtko[k];}
+        else if (data_input=="woa"){
+          Toc_base_vec[k] = Toc_base_woa[k] - 273.15;
+          Soc_base_vec[k] = Soc_base_woa[k];}
+        else{
+          Toc_base_vec[k] = cc.T_dummy; //dummy, FIXME why these values? 
+          Soc_base_vec[k] = cc.S_dummy; //dummy
+        }
+      }
+      else{
+        Toc_base_vec[k] = cc.T_dummy; //dummy, FIXME why these values? 
+        Soc_base_vec[k] = cc.S_dummy; //dummy
+      }
+
       gamma_T_star_vec[k]= gamma_T; 
       C_vec[k]           = value_C;
   }
+
   ierr = verbPrintf(5, grid.com,"  Using %d drainage basins and default values: \n"  
-                                "  gamma_T_star= %.3e, C = %.3e, \n"  
-                                "  calculate Soc and Toc from thetao and salinity... \n", numberOfBasins, gamma_T, value_C); CHKERRQ(ierr);       
+                                "  gamma_T_star= %.3e, C = %.3e... \n"  
+                                 , numberOfBasins, gamma_T, value_C); CHKERRQ(ierr);
 
-
-  // set continental shelf depth // FIXME -800 might be too high for Antacrtica
-  continental_shelf_depth = cc.continental_shelf_depth;
-  ierr = PISMOptionsReal("-continental_shelf_depth","-continental_shelf_depth", continental_shelf_depth, continental_shelf_depth_set); CHKERRQ(ierr);
-  if (continental_shelf_depth_set) {
-    ierr = verbPrintf(5, grid.com,
-                      "  Depth of continental shelf for computation of temperature and salinity input\n"
-                      "  is set for whole domain to continental_shelf_depth=%.0f meter\n", continental_shelf_depth); CHKERRQ(ierr);
+  if (!ocean_mean_set) {
+    ierr = verbPrintf(5, grid.com,"  calculate Soc and Toc from thetao and salinity... \n"); CHKERRQ(ierr);       
+  
+    // set continental shelf depth // FIXME -800 might be too high for Antacrtica
+    continental_shelf_depth = cc.continental_shelf_depth;
+    ierr = PISMOptionsReal("-continental_shelf_depth","-continental_shelf_depth", continental_shelf_depth, continental_shelf_depth_set); CHKERRQ(ierr);
+    if (continental_shelf_depth_set) {
+      ierr = verbPrintf(5, grid.com,
+                        "  Depth of continental shelf for computation of temperature and salinity input\n"
+                        "  is set for whole domain to continental_shelf_depth=%.0f meter\n", continental_shelf_depth); CHKERRQ(ierr);
+    }
   }
 
   return 0;
@@ -369,13 +407,20 @@ PetscErrorCode POoceanboxmodel::update(double my_t, double my_dt) {
   ierr = theta_ocean->average(m_t, m_dt); CHKERRQ(ierr);
   ierr = salinity_ocean->average(m_t, m_dt); CHKERRQ(ierr);
 
+  bool omeans_set;
+  ierr = PISMOptionsIsSet("-ocean_means", omeans_set); CHKERRQ(ierr);
+
   POBMConstants cc(config);
   ierr = initBasinsOptions(cc); CHKERRQ(ierr);
 
   ierr = roundBasins(); CHKERRQ(ierr); 
-  ierr = verbPrintf(4, grid.com,"0b : calculating mean salinity and temperatures\n"); CHKERRQ(ierr);
-  ierr = identifyMASK(OCEANMEANmask,"ocean"); CHKERRQ(ierr);
-  ierr = computeOCEANMEANS(); CHKERRQ(ierr);   
+  if (omeans_set){
+    ierr = verbPrintf(4, grid.com,"0b : reading mean salinity and temperatures\n"); CHKERRQ(ierr);
+  } else {
+    ierr = verbPrintf(4, grid.com,"0b : calculating mean salinity and temperatures\n"); CHKERRQ(ierr);
+    ierr = identifyMASK(OCEANMEANmask,"ocean"); CHKERRQ(ierr);
+    ierr = computeOCEANMEANS(); CHKERRQ(ierr);   
+  }
 
 
   //geometry of ice shelves and temperatures
