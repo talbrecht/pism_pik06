@@ -99,7 +99,7 @@ private:
   virtual PetscErrorCode identifyBOXMODELmask();
   virtual PetscErrorCode extendGLBox();
   virtual PetscErrorCode extendIFBox();
-  virtual PetscErrorCode oceanTemperature();
+  virtual PetscErrorCode oceanTemperature(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForGroundingLineBox(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForIceFrontBox(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForOtherShelves(const POBMConstants &constants);
@@ -164,6 +164,7 @@ protected:
 
   Timeseries *delta_T;
   double delta_T_factor;
+  double temp_anomaly;
 
 
   bool  ocean_oceanboxmodel_deltaT_set, 
