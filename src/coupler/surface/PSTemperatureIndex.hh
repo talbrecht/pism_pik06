@@ -77,7 +77,7 @@ protected:
   NCSpatialVariable ice_surface_temp;
 
   bool randomized, randomized_repeatable, fausto_params;
-  bool sd_file_set, sd_period_set, sd_ref_year_set, sd_use_param, pSet;
+  bool sd_file_set, sd_period_set, sd_ref_year_set, sd_use_param, pSet, std_dev_set;
   int sd_period, sd_period_years, sd_ref_year;
   double sd_ref_time, sd_param_a, sd_param_b;
   std::string filename;
