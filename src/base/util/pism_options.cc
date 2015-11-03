@@ -698,6 +698,9 @@ PetscErrorCode set_config_from_options(MPI_Comm com, PISMConfig &config) {
   ierr = config.flag_from_option("grain_size_age_coupling",
                                  "compute_grain_size_using_age"); CHKERRQ(ierr);
 
+  ierr = config.scalar_from_option("D_max_from_option", "D_max_from_option"); CHKERRQ(ierr);
+
+
   // SSA
   // Decide on the algorithm for solving the SSA
   ierr = config.keyword_from_option("ssa_method", "ssa_method", "fd,fem"); CHKERRQ(ierr);

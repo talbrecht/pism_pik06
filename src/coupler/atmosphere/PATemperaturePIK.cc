@@ -77,7 +77,7 @@ PetscErrorCode PATemperaturePIK::init(PISMVars &vars) {
       ierr = precipitation.read(precip_file, start); CHKERRQ(ierr); // fails if not found!
     }
   }
-
+  ierr = precipitation.copy_to(precip_standard); CHKERRQ(ierr);
 
 
   // initialize pointers to fields the parameterization depends on:
@@ -146,10 +146,10 @@ PetscErrorCode PATemperaturePIK::init(PISMVars &vars) {
   if (precip_increase_per_degree_set){
     if (precipitation_correction == false){
       PetscPrintf(grid.com,
-		  "PISM ERROR: Options -precip_increase_per_degree requires that option -precip_change <filename> is set,\n"
-		  "but -precip_change is either not set or the file specification is missing.\n Aborting\n"); CHKERRQ(ierr);
+      "PISM ERROR: Options -precip_increase_per_degree requires that option -precip_change <filename> is set,\n"
+      "but -precip_change is either not set or the file specification is missing.\n Aborting\n"); CHKERRQ(ierr);
       PISMEnd();
-    }else{
+    } else {
       PetscReal precip_percentage = (precip_increase_per_degree - 1.0) * 100; // in percent per degree of warming
       ierr = verbPrintf(2, grid.com,
                     "      Precipitation is increased by %1.1f percent per degree of warming\n", precip_percentage); CHKERRQ(ierr);
@@ -172,8 +172,7 @@ PetscErrorCode PATemperaturePIK::precip_time_series(int i, int j, double *values
 PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
   PetscErrorCode ierr;
 
-  ierr = PAYearlyCycle::mean_precipitation(result); CHKERRQ(ierr);
-
+  //ierr = PAYearlyCycle::mean_precipitation(result); CHKERRQ(ierr);
 
   if ((delta_T != NULL) && precipitation_correction) {
 
@@ -181,7 +180,8 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
     bool do_regrid = true;
     int start = -1;
     bool bc_file_set = false;
-
+    
+    /*
     // try to read precipitation from boundary forcing file, not from initfile or backupfile, to avoid jumps after restart 
     std::string option_prefix   = "-atmosphere_pik_temp";
     std::string precip_file;
@@ -214,7 +214,7 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
     } else {
       ierr = result.read(precip_file, start); CHKERRQ(ierr); // fails if not found!
     }
-
+    */
 
       //ierr = verbPrintf(2, grid.com,
       //              "      Precipitation is increased by %1.1f percent per degree of warming\n", (precip_increase_per_degree - 1.0) * 100); CHKERRQ(ierr);
@@ -222,15 +222,16 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
       // ... as in Pollard & De Conto (2012), Eqn (34b): 
       //    ierr = result.scale(pow (2.0, (0.1* (*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 2^(0.1*DeltaT)
 
-    // ... using a factor based on Clausius-Clapeyron:  
+
+    ierr = precip_standard.copy_to(result); CHKERRQ(ierr);
+
     if (precip_increase_per_degree_set){
       ierr = result.scale(pow (precip_increase_per_degree, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by factor^(DeltaT), i.e., ((factor - 1.0)+ 100) PERCENT precip increase per degree
-    }
-    else{
+    } else {
       ierr = result.scale(pow (1.05, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 1.05^(DeltaT), i.e., 5% precip increase per degree, DEFAULT CASE
     }
-
   }
+    ierr = PAYearlyCycle::mean_precipitation(result); CHKERRQ(ierr);
 
   return 0;
 }
@@ -267,48 +268,48 @@ if (lat->metadata().has_attribute("missing_at_bootstrap")) {
   for (int i = grid.xs; i<grid.xs+grid.xm; ++i) {
     for (int j = grid.ys; j<grid.ys+grid.ym; ++j) {
 
-	if (temp_huybrechts_dewolde99_set){
-	  PetscReal gamma_a;
-	  if (h(i,j) < 1500.0) {
-	    gamma_a = -0.005102;
-	  }else{
-	    gamma_a = -0.014285;
-	  }
-	  air_temp_mean_annual(i,j) = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0); // = TMA, mean annual temperature in Huybrechts & DeWolde (1999)
-	  air_temp_mean_july(i,j) = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)  
+  if (temp_huybrechts_dewolde99_set){
+    PetscReal gamma_a;
+    if (h(i,j) < 1500.0) {
+      gamma_a = -0.005102;
+    }else{
+      gamma_a = -0.014285;
+    }
+    air_temp_mean_annual(i,j) = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0); // = TMA, mean annual temperature in Huybrechts & DeWolde (1999)
+    air_temp_mean_july(i,j) = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)  
 
-	}else if (temp_era_interim_set){  // parametrization based on multiple regression analysis of ERA INTERIM data
-	  air_temp_mean_annual(i,j) = 273.15 + 29.2 - 0.0082 * h(i,j) - 0.576 * lat_degN(i,j)*(-1.0);
-	  air_temp_mean_july(i,j)   = 273.15 + 16.5 - 0.0068 * h(i,j) - 0.248 * lat_degN(i,j)*(-1.0);
+  }else if (temp_era_interim_set){  // parametrization based on multiple regression analysis of ERA INTERIM data
+    air_temp_mean_annual(i,j) = 273.15 + 29.2 - 0.0082 * h(i,j) - 0.576 * lat_degN(i,j)*(-1.0);
+    air_temp_mean_july(i,j)   = 273.15 + 16.5 - 0.0068 * h(i,j) - 0.248 * lat_degN(i,j)*(-1.0);
 
-	}else if (temp_era_interim_sin_set){  // parametrization based on multiple regression analysis of ERA INTERIM data with sin(lat)
-	  air_temp_mean_annual(i,j) = 273.15 - 2.0 -0.0082*h(i,j) + 18.4 * (sin(3.1415*lat_degN(i,j)/180)+0.8910)/(1-0.8910);
-	  air_temp_mean_july(i,j)   = 273.15 + 3.2 -0.0067*h(i,j) +  8.3 * (sin(3.1415*lat_degN(i,j)/180)+0.8910)/(1-0.8910);
+  }else if (temp_era_interim_sin_set){  // parametrization based on multiple regression analysis of ERA INTERIM data with sin(lat)
+    air_temp_mean_annual(i,j) = 273.15 - 2.0 -0.0082*h(i,j) + 18.4 * (sin(3.1415*lat_degN(i,j)/180)+0.8910)/(1-0.8910);
+    air_temp_mean_july(i,j)   = 273.15 + 3.2 -0.0067*h(i,j) +  8.3 * (sin(3.1415*lat_degN(i,j)/180)+0.8910)/(1-0.8910);
 
-	}else{
-	  // annual mean temperature = Martin et al. (2011) parametrization
-	  // summer mean temperature = anomaly to Huybrechts & DeWolde (1999)
-	  air_temp_mean_annual(i,j) = 273.15 + 30 - 0.0075 * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);  // surface temperature parameterization as in Martin et al. 2011, Eqn. 2.0.2
+  }else{
+    // annual mean temperature = Martin et al. (2011) parametrization
+    // summer mean temperature = anomaly to Huybrechts & DeWolde (1999)
+    air_temp_mean_annual(i,j) = 273.15 + 30 - 0.0075 * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);  // surface temperature parameterization as in Martin et al. 2011, Eqn. 2.0.2
 
-	  PetscReal gamma_a;
-	      if (h(i,j) < 1500.0) {
-		gamma_a = -0.005102;
-	      }else{
-		gamma_a = -0.014285;
-	      }
+    PetscReal gamma_a;
+        if (h(i,j) < 1500.0) {
+    gamma_a = -0.005102;
+        }else{
+    gamma_a = -0.014285;
+        }
 
-	  PetscReal TMA = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0); // = TMA, mean annual temperature in Huybrechts & DeWolde (1999)
-	  PetscReal TMS = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)
+    PetscReal TMA = 273.15 + 34.46 + gamma_a * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0); // = TMA, mean annual temperature in Huybrechts & DeWolde (1999)
+    PetscReal TMS = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999)
 
-	  air_temp_mean_july(i,j) = air_temp_mean_annual(i,j) + (TMS - TMA);   
+    air_temp_mean_july(i,j) = air_temp_mean_annual(i,j) + (TMS - TMA);   
 
-	  //// ALTERNATIVE:
-	  //// annual mean temperature = Martin et al. (2011)
-	  //// summer mean temperature = Huybrechts & DeWolde (1999)
-	  //      air_temp_mean_annual(i,j) = 273.15 + 30 - 0.0075 * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);  // annual mean temperature as in Martin et al. 2011, Eqn. 2.0.2
-	  //      air_temp_mean_july(i,j) = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999) 
+    //// ALTERNATIVE:
+    //// annual mean temperature = Martin et al. (2011)
+    //// summer mean temperature = Huybrechts & DeWolde (1999)
+    //      air_temp_mean_annual(i,j) = 273.15 + 30 - 0.0075 * h(i,j) - 0.68775 * lat_degN(i,j)*(-1.0);  // annual mean temperature as in Martin et al. 2011, Eqn. 2.0.2
+    //      air_temp_mean_july(i,j) = 273.15 + 14.81 - 0.00692 * h(i,j) - 0.27937 * lat_degN(i,j)*(-1.0); // = TMS, mean summer temperature in Huybrechts & DeWolde (1999) 
 
-	} 
+  } 
 
     }
   }

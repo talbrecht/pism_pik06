@@ -311,6 +311,10 @@ netcdf pism_config {
     pism_config:bed_smoother_range = 5.0e3;
     pism_config:bed_smoother_range_doc = "m; half-width of smoothing domain for PISMBedSmoother, in implementing [@ref Schoofbasaltopg2003] bed roughness parameterization for SIA; set value to zero to turn off mechanism";
 
+    pism_config:D_max_from_option = 10.0;
+    pism_config:D_max_from_option_doc = "m2 s-1; maximum set diffusivity of SIA calculation";
+
+
     pism_config:max_iterations_ssafd = 300;
     pism_config:max_iterations_ssafd_doc = "Maximum number of iterations for the ice viscosity computation, in the SSAFD object";
 

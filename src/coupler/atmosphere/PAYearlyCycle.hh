@@ -50,7 +50,7 @@ protected:
   PISMVars *variables;
   double snow_temp_july_day;
   std::string reference, precip_filename;
-  IceModelVec2S air_temp_mean_annual, air_temp_mean_july, precipitation;
+  IceModelVec2S air_temp_mean_annual, air_temp_mean_july, precipitation, precip_standard;
   NCSpatialVariable air_temp_snapshot;
   std::vector<double> m_ts_times, m_cosine_cycle;
 private:

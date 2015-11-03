@@ -64,7 +64,18 @@ PetscErrorCode PAYearlyCycle::allocate_PAYearlyCycle() {
                               ""); CHKERRQ(ierr); // no CF standard_name ??
   ierr = precipitation.set_glaciological_units("m year-1");
   precipitation.write_in_glaciological_units = true;
-  precipitation.set_time_independent(true);
+  //precipitation.set_time_independent(true);
+
+  //////////////
+  ierr = precip_standard.create(grid, "precipitation_standard", WITHOUT_GHOSTS); CHKERRQ(ierr);
+  ierr = precip_standard.set_attrs("climate_state", 
+                              "mean present-day annual ice-equivalent precipitation rate",
+                              "m s-1", 
+                              ""); CHKERRQ(ierr); // no CF standard_name ??
+  ierr = precip_standard.set_glaciological_units("m year-1");
+  precip_standard.write_in_glaciological_units = true;
+  precip_standard.set_time_independent(true);
+  ////////////////
 
   air_temp_snapshot.init_2d("air_temp_snapshot", grid);
   air_temp_snapshot.set_string("pism_intent", "diagnostic");
@@ -98,11 +109,15 @@ PetscErrorCode PAYearlyCycle::init(PISMVars &vars) {
     ierr = precipitation.read(precip_filename, start); CHKERRQ(ierr); // fails if not found!
   }
 
+  ierr = precipitation.copy_to(precip_standard); CHKERRQ(ierr);
+
   return 0;
 }
 
 void PAYearlyCycle::add_vars_to_output(std::string keyword, std::set<std::string> &result) {
+  
   result.insert("precipitation");
+  result.insert("precipitation_standard");
 
   if (keyword == "big") {
     result.insert("air_temp_mean_annual");
@@ -129,6 +144,10 @@ PetscErrorCode PAYearlyCycle::define_variables(std::set<std::string> vars, const
 
   if (set_contains(vars, "precipitation")) {
     ierr = precipitation.define(nc, nctype); CHKERRQ(ierr);
+  }
+
+  if (set_contains(vars, "precipitation_standard")) {
+    ierr = precip_standard.define(nc, nctype); CHKERRQ(ierr);
   }
 
   return 0;
@@ -158,6 +177,10 @@ PetscErrorCode PAYearlyCycle::write_variables(std::set<std::string> vars, const 
 
   if (set_contains(vars, "precipitation")) {
     ierr = precipitation.write(nc); CHKERRQ(ierr);
+  }
+
+  if (set_contains(vars, "precipitation_standard")) {
+    ierr = precip_standard.write(nc); CHKERRQ(ierr);
   }
 
   return 0;

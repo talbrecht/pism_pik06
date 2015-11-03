@@ -22,6 +22,7 @@
 #include "enthalpyConverter.hh"
 #include "PISMVars.hh"
 #include "flowlaw_factory.hh"
+#include "pism_options.hh"
 
 SIAFD::~SIAFD() {
   delete bed_smoother;
@@ -537,6 +538,14 @@ PetscErrorCode SIAFD::compute_diffusive_flux(IceModelVec2Stag &h_x, IceModelVec2
   IceModelVec2S &thk_smooth = work_2d[0],
     &theta = work_2d[1];
 
+  double D_max_from_option = config.get("D_max_from_option");
+  bool D_max_from_option_set;
+  ierr = PISMOptionsReal("-D_max_from_option","-D_max_from_option", D_max_from_option, D_max_from_option_set); CHKERRQ(ierr);
+  if (D_max_from_option_set) {
+    ierr = verbPrintf(4, grid.com,"!!!! Dmax_diffuse set: %.2f\n",D_max_from_option);
+  }
+
+
   bool full_update = (fast == false);
 
   ierr = result.set(0.0); CHKERRQ(ierr);
@@ -662,6 +671,9 @@ PetscErrorCode SIAFD::compute_diffusive_flux(IceModelVec2Stag &h_x, IceModelVec2
         if (i < 0 || i >= grid.Mx-1 || j < 0 || j >= grid.My-1)
           Dfoffset = 0.0;
 
+        if (D_max_from_option_set) {
+          Dfoffset = PetscMin(D_max_from_option, Dfoffset);
+        }
         my_D_max = PetscMax(my_D_max, Dfoffset);
 
         // vertically-averaged SIA-only flux, sans sliding; note
@@ -742,6 +754,13 @@ PetscErrorCode SIAFD::compute_diffusivity_staggered(IceModelVec2Stag &D_stag) {
   double *delta_ij;
   IceModelVec2S &thk_smooth = work_2d[0];
 
+  double D_max_from_option = config.get("D_max_from_option");
+  bool D_max_from_option_set;
+  ierr = PISMOptionsReal("-D_max_from_option","-D_max_from_option", D_max_from_option, D_max_from_option_set); CHKERRQ(ierr);
+  if (D_max_from_option_set) {
+    ierr = verbPrintf(4, grid.com,"!!!! Dmax_staggered set: %.1f\n",D_max_from_option);
+  }
+
   ierr = bed_smoother->get_smoothed_thk(*surface, *thickness, *mask,
                                         &thk_smooth); CHKERRQ(ierr);
 
@@ -779,6 +798,9 @@ PetscErrorCode SIAFD::compute_diffusivity_staggered(IceModelVec2Stag &D_stag) {
         const double dz = thk - grid.zlevels[ks];
         Dfoffset += 0.5 * dz * dz * delta_ij[ks];
 
+        if (D_max_from_option_set) {
+          Dfoffset = PetscMin(D_max_from_option, Dfoffset);
+        }
         D_stag(i,j,o) = Dfoffset;
       }
     }
