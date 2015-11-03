@@ -84,6 +84,11 @@ PetscErrorCode PSTemperatureIndex::allocate_PSTemperatureIndex() {
     ierr = PISMOptionsInt("-pdd_sd_reference_year",
                           "Standard deviation data reference year",
                           sd_ref_year, sd_ref_year_set); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-pdd_factor_ice", "PDD ice factor",
+                           base_ddf.ice, pSet); CHKERRQ(ierr);
+
+    ierr = PISMOptionsReal("-pdd_std_dev", "PDD standard deviation",
+                           base_pddStdDev, std_dev_set); CHKERRQ(ierr);
   }
   ierr = PetscOptionsEnd(); CHKERRQ(ierr);
 
@@ -252,7 +257,7 @@ PetscErrorCode PSTemperatureIndex::init(PISMVars &vars) {
     ierr = air_temp_sd.init(filename, sd_period, sd_ref_time); CHKERRQ(ierr);
   } else {
     ierr = verbPrintf(2, grid.com,
-                      "  Option -pdd_sd_file is not set. Using a constant value.\n");
+                      "  Option -pdd_sd_file is not set. Using a constant standard deviation %.1f.\n",base_pddStdDev);
     CHKERRQ(ierr);
     ierr = air_temp_sd.init_constant(base_pddStdDev); CHKERRQ(ierr);
   }
