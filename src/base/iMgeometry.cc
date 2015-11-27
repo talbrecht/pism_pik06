@@ -1021,7 +1021,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g < 0.5)
             gl_mask_gr_x += (lambda_g - 0.5);
 
-        } else if (mask.ocean(i - 1, j)) {
+        }
+        if (mask.ocean(i - 1, j)) {
 
           beta = mu*ice_thickness(i - 1, j) + bed_topography(i - 1, j) - sea_level;
 
@@ -1032,7 +1033,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g < 0.5)
             gl_mask_gr_x += (lambda_g - 0.5);
 
-        } else if (mask.ocean(i, j + 1)) {
+        }
+        if (mask.ocean(i, j + 1)) {
 
           beta = mu*ice_thickness(i, j + 1) + bed_topography(i, j + 1) - sea_level;
 
@@ -1043,7 +1045,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g < 0.5)
             gl_mask_gr_y += (lambda_g - 0.5);
 
-        } else if (mask.ocean(i, j - 1)) {
+        }
+        if (mask.ocean(i, j - 1)) {
 
           beta = mu*ice_thickness(i, j - 1) + bed_topography(i, j - 1) - sea_level;
 
@@ -1059,6 +1062,12 @@ PetscErrorCode IceModel::update_floatation_mask() {
         gl_mask_x(i,j) = gl_mask_gr_x;
         gl_mask_y(i,j) = gl_mask_gr_y;
         gl_mask(i,j)   = gl_mask_gr_x * gl_mask_gr_y;
+
+        if (gl_mask(i,j)<0.1){
+          ierr = verbPrintf(3, grid.com,"!!!!!gr: glmask=%.3f, glx==%.3f, glx==%.3f at (%d,%d)\n",gl_mask(i,j),gl_mask_x(i,j),gl_mask_y(i,j),i,j); CHKERRQ(ierr);
+          gl_mask(i,j)=0.1;
+        }
+
       }
 
       // floating part
@@ -1076,7 +1085,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g >= 0.5)
             gl_mask_fl_x -= (lambda_g - 0.5);
 
-        } else if (mask.grounded(i + 1, j)) {
+        }
+        if (mask.grounded(i + 1, j)) {
 
           alpha = mu*ice_thickness(i + 1, j) + bed_topography(i + 1, j) - sea_level;
 
@@ -1087,7 +1097,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g >= 0.5)
             gl_mask_fl_x -= (lambda_g - 0.5);
 
-        } else if (mask.grounded(i, j - 1)) {
+        }
+        if (mask.grounded(i, j - 1)) {
 
           alpha = mu*ice_thickness(i, j - 1) + bed_topography(i, j - 1) - sea_level;
 
@@ -1098,7 +1109,8 @@ PetscErrorCode IceModel::update_floatation_mask() {
           if (lambda_g >= 0.5)
             gl_mask_fl_y -= (lambda_g - 0.5);
 
-        } else if (mask.grounded(i, j + 1)) {
+        }
+        if (mask.grounded(i, j + 1)) {
 
           alpha = mu*ice_thickness(i, j + 1) + bed_topography(i, j + 1) - sea_level;
 
@@ -1114,6 +1126,11 @@ PetscErrorCode IceModel::update_floatation_mask() {
         gl_mask_x(i,j) = 1.0 - gl_mask_fl_x;
         gl_mask_y(i,j) = 1.0 - gl_mask_fl_y;
         gl_mask(i,j)   = 1.0 - gl_mask_fl_x * gl_mask_fl_y;
+
+        if (gl_mask(i,j)>0.9){
+          ierr = verbPrintf(3, grid.com,"!!!!!fl: glmask=%.3f, glx==%.3f, glx==%.3f at (%d,%d)\n",gl_mask(i,j),gl_mask_x(i,j),gl_mask_y(i,j),i,j); CHKERRQ(ierr);
+          gl_mask(i,j)=0.9;
+        }
       }
     } // inner for loop (j)
   } // outer for loop (i)

@@ -51,7 +51,7 @@ PetscErrorCode PISMMohrCoulombYieldStress::allocate() {
   ierr = till_phi.set_attrs("model_state",
                             "friction angle for till under grounded ice sheet",
                             "degrees", ""); CHKERRQ(ierr);
-  till_phi.set_time_independent(true);
+  //till_phi.set_time_independent(true);
   // in this model; need not be time-independent in general
 
   ierr = tauc.create(grid, "tauc", WITH_GHOSTS, grid.max_stencil_width); CHKERRQ(ierr);
@@ -336,6 +336,25 @@ PetscErrorCode PISMMohrCoulombYieldStress::update(double my_t, double my_dt) {
     ierr = hydrology->till_water_thickness(tillwat); CHKERRQ(ierr);
     ierr = hydrology->overburden_pressure(Po); CHKERRQ(ierr);
   }
+
+  /////////////////////////////////////////////////////////////////
+  bool update_phi_set;
+  ierr = PISMOptionsIsSet("-update_topg_to_phi",
+                            "Update the parameterization topg_to_phi for a deforming bed", update_phi_set); CHKERRQ(ierr);
+  if (update_phi_set) {
+    bool beddef_used;
+    std::string beddef_model_used = "none";
+    ierr = PISMOptionsString("-bed_def", "check if bed deformation is used",beddef_model_used, beddef_used); CHKERRQ(ierr);
+    bool topg_to_phi_set;
+    ierr = PISMOptionsIsSet("-topg_to_phi",
+                            "Use the till friction angle parameterization", topg_to_phi_set); CHKERRQ(ierr);
+
+    if (topg_to_phi_set && beddef_used && beddef_model_used!="none") {
+      ierr = verbPrintf(2, grid.com,"  option -topg_to_phi seen; creating tillphi map from bed elev ...\n"); CHKERRQ(ierr);
+      ierr = topg_to_phi(); CHKERRQ(ierr);
+    }
+  }
+  ///////////////////////////////////////////////////////////////////////////
 
   ierr = mask->begin_access(); CHKERRQ(ierr);
   ierr = tauc.begin_access(); CHKERRQ(ierr);

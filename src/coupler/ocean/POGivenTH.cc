@@ -135,10 +135,12 @@ PetscErrorCode POGivenTH::allocate_POGivenTH() {
 
     bool delta_T_factor_set,pmt_shift_set,ot_shift_set;
     delta_T_factor=1.0,pmt_shift=0.0,ot_shift=0.0;
+    //bool no_shelfb_melt;
 
+    //ierr = PISMOptionsIsSet("-no_shelfb_melt", no_shelfb_melt); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-ocean_th_factor","ocean_th_factor set",delta_T_factor, delta_T_factor_set); CHKERRQ(ierr);
-    ierr = PISMOptionsReal("-pmt_shift","pmt shift set",pmt_shift, pmt_shift_set); CHKERRQ(ierr);
-    ierr = PISMOptionsReal("-ot_shift","ot shift set",ot_shift, ot_shift_set); CHKERRQ(ierr);
+    //ierr = PISMOptionsReal("-pmt_shift","pmt shift set",pmt_shift, pmt_shift_set); CHKERRQ(ierr);
+    //ierr = PISMOptionsReal("-ot_shift","ot shift set",ot_shift, ot_shift_set); CHKERRQ(ierr);
 
   }
 
@@ -262,6 +264,9 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
   ierr = theta_ocean->average(m_t, m_dt); CHKERRQ(ierr);
   ierr = salinity_ocean->average(m_t, m_dt); CHKERRQ(ierr);
 
+  bool no_shelfb_melt;
+  ierr = PISMOptionsIsSet("-no_shelfb_melt", no_shelfb_melt); CHKERRQ(ierr);
+
   POGivenTHConstants c(config);
 
   ierr = ice_thickness->begin_access();  CHKERRQ(ierr);
@@ -311,6 +316,8 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
       // convert from Celsius into Kelvin:
       shelfbtemp(i,j)     = shelf_base_temperature_celsius + 273.15;
       shelfbmassflux(i,j) = shelf_base_mass_flux;
+      if (no_shelfb_melt)
+        shelfbmassflux(i,j) = 0.0;
     }
   }
 

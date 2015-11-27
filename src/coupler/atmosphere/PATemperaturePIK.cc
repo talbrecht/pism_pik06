@@ -227,6 +227,8 @@ PetscErrorCode PATemperaturePIK::mean_precipitation(IceModelVec2S &result) {
 
     if (precip_increase_per_degree_set){
       ierr = result.scale(pow (precip_increase_per_degree, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by factor^(DeltaT), i.e., ((factor - 1.0)+ 100) PERCENT precip increase per degree
+      ierr = verbPrintf(2, grid.com,
+                    "      Precipitation is increased by %1.1f percent per degree of warming, by a factor %.3f for warming %.1f\n", (precip_increase_per_degree - 1.0) * 100,pow(precip_increase_per_degree,((*delta_T)(m_t + 0.5 * m_dt))),((*delta_T)(m_t + 0.5 * m_dt)) ); CHKERRQ(ierr);
     } else {
       ierr = result.scale(pow (1.05, ((*delta_T)(m_t + 0.5 * m_dt)))); CHKERRQ(ierr); // scale by 1.05^(DeltaT), i.e., 5% precip increase per degree, DEFAULT CASE
     }

@@ -75,7 +75,7 @@ public:
     bool limit_salinity_range;
   };
 protected:
-    bool ocean_th_deltaT_set;
+    bool ocean_th_deltaT_set; //, no_shelb_melt;
     Timeseries *delta_T;
     double delta_T_factor, pmt_shift, ot_shift;
     IceModelVec2S ocean_temp;
