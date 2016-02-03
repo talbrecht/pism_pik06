@@ -85,8 +85,9 @@ PetscErrorCode PSTemperatureIndex::allocate_PSTemperatureIndex() {
                           "Standard deviation data reference year",
                           sd_ref_year, sd_ref_year_set); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-pdd_factor_ice", "PDD ice factor",
-                           base_ddf.ice, pSet); CHKERRQ(ierr);
-
+                           base_ddf.ice, piSet); CHKERRQ(ierr);
+    ierr = PISMOptionsReal("-pdd_factor_snow", "PDD snow factor",
+                           base_ddf.snow, psSet); CHKERRQ(ierr);
     ierr = PISMOptionsReal("-pdd_std_dev", "PDD standard deviation",
                            base_pddStdDev, std_dev_set); CHKERRQ(ierr);
   }
@@ -352,6 +353,8 @@ PetscErrorCode PSTemperatureIndex::update(double my_t, double my_dt) {
   }
 
   DegreeDayFactors  ddf = base_ddf;
+  //ierr = verbPrintf(2, grid.com, "!!!!!!! pdd factors set to %.4f, %.4f, %.4f\n",base_ddf.ice,base_ddf.snow,base_pddStdDev);CHKERRQ(ierr);
+
 
   ierr = atmosphere->begin_pointwise_access(); CHKERRQ(ierr);
   ierr = air_temp_sd.begin_access(); CHKERRQ(ierr);
