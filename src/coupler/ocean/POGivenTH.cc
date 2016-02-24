@@ -279,8 +279,8 @@ PetscErrorCode POGivenTH::update(double my_t, double my_dt) {
 
   //ierr = verbPrintf(2, grid.com,"!!!! delta_T=%f, delta_S=%f...\n",(*delta_T)(m_t + 0.5*m_dt),sea_level);  CHKERRQ(ierr);
 
-  for (PetscInt   i = grid.xs; i < grid.xs+grid.xm; ++i) {
-    for (PetscInt j = grid.ys; j < grid.ys+grid.ym; ++j) {
+  for (int   i = grid.xs; i < grid.xs+grid.xm; ++i) {
+    for (int j = grid.ys; j < grid.ys+grid.ym; ++j) {
 
       double 
         shelfbaseelev = (c.ice_density / c.sea_water_density) * (*ice_thickness)(i,j),

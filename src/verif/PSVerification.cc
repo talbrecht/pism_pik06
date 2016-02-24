@@ -35,10 +35,10 @@
 const double PSVerification::ablationRateOutside = 0.02; // m/year
 const double PSVerification::secpera = 3.15569259747e7;
 
-const PetscScalar PSVerification::ST = 1.67e-5;
-const PetscScalar PSVerification::Tmin = 223.15;  // K
-const PetscScalar PSVerification::LforFG = 750000; // m
-const PetscScalar PSVerification::ApforG = 200; // m
+const double PSVerification::ST = 1.67e-5;
+const double PSVerification::Tmin = 223.15;  // K
+const double PSVerification::LforFG = 750000; // m
+const double PSVerification::ApforG = 200; // m
 
 PSVerification::PSVerification(IceGrid &g, const PISMConfig &conf,
                                EnthalpyConverter *EC, int test)
@@ -175,8 +175,8 @@ PetscErrorCode PSVerification::update_L() {
     Lsqr        = L * L;
 
   ierr = m_climatic_mass_balance.begin_access(); CHKERRQ(ierr);
-  for (PetscInt   i = grid.xs; i < grid.xs+grid.xm; ++i) {
-    for (PetscInt j = grid.ys; j < grid.ys+grid.ym; ++j) {
+  for (int   i = grid.xs; i < grid.xs+grid.xm; ++i) {
+    for (int j = grid.ys; j < grid.ys+grid.ym; ++j) {
       double r = grid.radius(i, j);
       m_climatic_mass_balance(i, j) = a0 * (1.0 - (2.0 * r * r / Lsqr));
 
@@ -261,9 +261,9 @@ PetscErrorCode PSVerification::update_ABCDEH(double time) {
   ierr = m_ice_surface_temp.set(T0); CHKERRQ(ierr);
 
   ierr = m_climatic_mass_balance.begin_access(); CHKERRQ(ierr);
-  for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
-    for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
-      PetscScalar xx = grid.x[i], yy = grid.y[j],
+  for (int i=grid.xs; i<grid.xs+grid.xm; ++i) {
+    for (int j=grid.ys; j<grid.ys+grid.ym; ++j) {
+      double xx = grid.x[i], yy = grid.y[j],
         r = grid.radius(i, j);
       switch (m_testname) {
         case 'A':
@@ -304,8 +304,8 @@ PetscErrorCode PSVerification::update_FG(double time) {
 
   ierr = m_climatic_mass_balance.begin_access(); CHKERRQ(ierr);
   ierr = m_ice_surface_temp.begin_access();      CHKERRQ(ierr);
-  for (PetscInt i = grid.xs; i < grid.xs + grid.xm; ++i) {
-    for (PetscInt j = grid.ys; j < grid.ys + grid.ym; ++j) {
+  for (int i = grid.xs; i < grid.xs + grid.xm; ++i) {
+    for (int j = grid.ys; j < grid.ys + grid.ym; ++j) {
       double r = std::max(grid.radius(i, j), 1.0); // avoid singularity at origin
 
       m_ice_surface_temp(i, j) = Tmin + ST * r;

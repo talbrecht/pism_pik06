@@ -146,8 +146,8 @@ PetscErrorCode POGivenBMR::update(PetscReal my_t, PetscReal my_dt) {
   ierr = ice_thickness->get_array(H);   CHKERRQ(ierr);
 
 
-  for (PetscInt i=grid.xs; i<grid.xs+grid.xm; ++i) {
-    for (PetscInt j=grid.ys; j<grid.ys+grid.ym; ++j) {
+  for (int i=grid.xs; i<grid.xs+grid.xm; ++i) {
+    for (int j=grid.ys; j<grid.ys+grid.ym; ++j) {
 
       PetscReal reference_thickness = melt_ref_thk(i,j),
       shelfbaseelev     = - ( c.ice_density / c.sea_water_density ) * H[i][j], // FIXME issue #15

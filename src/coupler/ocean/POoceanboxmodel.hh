@@ -72,7 +72,7 @@ public:
       double        gamma_T_o, meltFactor, meltSalinity, b2;
       double        continental_shelf_depth;
 
-      PetscInt      numberOfBasins; 
+      int      numberOfBasins; 
 
   };
 
@@ -157,7 +157,7 @@ private:
                 T_dummy, S_dummy,
                 continental_shelf_depth;
 
-  PetscInt      numberOfBasins;
+  int      numberOfBasins;
 
 
 protected:
