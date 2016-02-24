@@ -342,6 +342,7 @@ PetscErrorCode POoceanboxmodel::initBasinsOptions(const POBMConstants &cc) {
 
   ///////////////////////////////////////////////////////////////////////////////////
   // data have been calculated previously for the 18 Rignot basins
+
   //const double Toc_base_schmidtko[18] = {0.0,271.56415203,271.63356482,271.42074233,271.46720524,272.30038929,271.52821139,271.5440751,271.58201494,272.90159695,273.61058862,274.19203524,274.32083917,272.55938554,271.35349906,271.39337366,271.49926019,271.49473924}; //Schmidtko
   //const double Soc_base_schmidtko[18] = {0.0,34.49308909,34.50472554,34.70187911,34.65306507,34.7137078,34.74817136,34.89206844,34.78056731,34.60528314,34.72521443,34.86210624,34.83836297,34.73392011,34.83617088,34.82137147,34.69477334,34.48145265}; //Schmidtko
 
@@ -356,6 +357,7 @@ PetscErrorCode POoceanboxmodel::initBasinsOptions(const POBMConstants &cc) {
 
   const double Toc_base_woa[20] = {272.99816667,271.27814004,272.1840257,272.04435251,272.20415662,272.36396072,271.48763831,271.99695864,272.06504052,272.27114732,272.66657018,271.18920729,271.74067699,273.01811291,272.15295572,273.08542047,272.74584469,273.14263356,272.58496563,272.45217911}; //World Ocean Atlas
   const double Soc_base_woa[20] = {34.6810522,34.78161073,34.67151084,34.66538478,34.67127468,34.67716458,34.75327377,34.69213327,34.72086382,34.70670158,34.71210592,34.80229468,34.76588022,34.69745763,34.7090778,34.68690903,34.66379606,34.64572337,34.6574402,34.65813983}; //World Ocean Atlas
+
 
 
   bool ocean_mean_set;
@@ -1004,12 +1006,14 @@ PetscErrorCode POoceanboxmodel::oceanTemperature(const POBMConstants &cc) {
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //prevent ocean temp from being below pressure melting temperature
+
         //const double shelfbaseelev = - (cc.rhoi / cc.rhow) * (*ice_thickness)(i,j);
 
         const double pressure = cc.rhoi * cc.earth_grav * (*ice_thickness)(i,j) * 1e-4;
         // MUST be in dbar  // NOTE 1dbar = 10000 Pa = 1e4 kg m-1 s-2,
         // FIXME need to include atmospheric pressure?
         const double T_pmt = cc.a*Soc_base(i,j) + cc.b - cc.c*pressure;
+
         //ierr = verbPrintf(5, grid.com,"!!!!! T_pmt=%f, Ta=%f, Tb=%f, Toc=%f, Ta2=%f, Toc2=%f at %d,%d,%d\n", T_pmt,   Toc_anomaly(i,j),   Toc_base(i,j)-273.15,   Toc_base(i,j)-273.15 + Toc_anomaly(i,j),    PetscMax( T_pmt+273.15-Toc_base(i,j),   Toc_anomaly(i,j)),    Toc_base(i,j)-273.15+PetscMax( T_pmt+273.15-Toc_base(i,j),Toc_anomaly(i,j))  ,i  ,j,  shelf_id); CHKERRQ(ierr);
 
         Toc_anomaly(i,j) = PetscMax( T_pmt + 273.15 - Toc_base(i,j) , Toc_anomaly(i,j)); 
@@ -1069,8 +1073,9 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForGroundingLineBox(const POBMConst
   ierr = overturning.begin_access(); CHKERRQ(ierr);
   ierr = basalmeltrate_shelf.begin_access(); CHKERRQ(ierr);
 
+
   double countHelpterm=0,
-              lcountHelpterm=0;
+         lcountHelpterm=0;
 
 
   for (int i=grid.xs; i<grid.xs+grid.xm; ++i) {
@@ -1089,18 +1094,22 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForGroundingLineBox(const POBMConst
 
       if (BOXMODELmask(i,j) == box_GL && shelf_id > 0.0){
 
+
         const double pressure = cc.rhoi * cc.earth_grav * (*ice_thickness)(i,j) * 1e-4; // MUST be in dbar  // NOTE 1dbar = 10000 Pa = 1e4 kg m-1 s-2
         // FIXME need to include atmospheric pressure?
         T_star(i,j) = cc.a*Soc_base(i,j) + cc.b - cc.c*pressure - (Toc_base(i,j) - 273.15 + Toc_anomaly(i,j)); // in °C
 
         double gamma_T_star,C1,g1;
+
         gamma_T_star = gamma_T_star_vec[shelf_id];
         C1 = C_vec[shelf_id];
         g1 = (counter_GLbox[shelf_id] * grid.dx * grid.dy) * gamma_T_star / (C1*cc.rho_star); 
 
         //! temperature for grounding line box
+
         double helpterm1 = g1/(cc.beta*(Soc_base(i,j) / (cc.nu*cc.lambda)) - cc.alpha);                  // in 1 / (1/°C) = °C
         double helpterm2 = (g1*T_star(i,j)) / (cc.beta*(Soc_base(i,j) / (cc.nu*cc.lambda)) - cc.alpha); // in °C / (1/°C) = °C^2
+
 
         if ((0.25*PetscSqr(helpterm1) -helpterm2) < 0.0) {
           //ierr = verbPrintf(5, grid.com,"PISM_ERROR: Tb=%f, Ta=%f, Tst=%f, Sb=%f  at %d, %d\n\n",Toc_base(i,j),Toc_anomaly(i,j),T_star(i,j),Soc_base(i,j),i,j); CHKERRQ(ierr);
@@ -1209,14 +1218,15 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForIceFrontBox(const POBMConstants 
   ierr = overturning.begin_access(); CHKERRQ(ierr);
   ierr = basalmeltrate_shelf.begin_access(); CHKERRQ(ierr);
 
+
   double countk4=0,
-              lcountk4=0,
-              countGl0=0,
-              lcountGl0=0,
-              countSqr=0,
-              lcountSqr=0,
-              countMean0=0,
-              lcountMean0=0;
+         lcountk4=0,
+         countGl0=0,
+         lcountGl0=0,
+         countSqr=0,
+         lcountSqr=0,
+         countMean0=0,
+         lcountMean0=0;
 
 
   //! The ice front box = BOX I
@@ -1227,11 +1237,13 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForIceFrontBox(const POBMConstants 
 
       if (BOXMODELmask(i,j)==box_IF && shelf_id > 0.0){
 
+
         const double pressure = cc.rhoi * cc.earth_grav * (*ice_thickness)(i,j) * 1e-4; // MUST be in dbar  // NOTE 1dbar = 10000 Pa = 1e4 kg m-1 s-2
         // FIXME need to include atmospheric pressure?
         T_star(i,j) = cc.a*Soc_base(i,j) + cc.b - cc.c*pressure - (Toc_base(i,j) - 273.15 + Toc_anomaly(i,j)); // in °C
 
         double  gamma_T_star,area_GLbox,area_CFbox,mean_salinity_in_GLbox,mean_meltrate_in_GLbox,mean_overturning_in_GLbox;
+
 
         gamma_T_star = gamma_T_star_vec[shelf_id]; 
         area_CFbox = (counter_CFbox[shelf_id] * grid.dx * grid.dy); 
@@ -1248,7 +1260,9 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForIceFrontBox(const POBMConstants 
 
         } else {
 
+
             double k1,k2,k3,k4,k5,k6;
+
             k1 = (area_CFbox*gamma_T_star)/(cc.nu*cc.lambda);
             // in (m^2*m/s)/(°C) = m^3/(s*°C)
             k2 = 1/(mean_overturning_in_GLbox + area_CFbox*gamma_T_star);
@@ -1377,7 +1391,9 @@ PetscErrorCode POoceanboxmodel::basalMeltRateForOtherShelves(const POBMConstants
         Toc(i,j) = Toc_base(i,j) + Toc_anomaly(i,j); // in K, NOTE: Toc_base is already in K, so no (+273.15)
         // default: compute the melt rate from the temperature field according to beckmann_goosse03 (see below)
         
+
         const double shelfbaseelev = - (cc.rhoi / cc.rhow) * (*ice_thickness)(i,j);
+
 
         //FIXME: for consistency reasons there should be constants a,b,c, gamma_T used
         double T_f = 273.15 + (cc.a*cc.meltSalinity + cc.b2 + cc.c*shelfbaseelev); // add 273.15 to get it in Kelvin... 35 is the salinity
