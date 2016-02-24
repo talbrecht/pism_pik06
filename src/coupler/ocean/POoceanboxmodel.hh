@@ -72,7 +72,7 @@ public:
       double        gamma_T_o, meltFactor, meltSalinity, b2;
       double        continental_shelf_depth;
 
-      PetscInt      numberOfBasins; 
+      int      numberOfBasins; 
 
   };
 
@@ -99,7 +99,7 @@ private:
   virtual PetscErrorCode identifyBOXMODELmask();
   virtual PetscErrorCode extendGLBox();
   virtual PetscErrorCode extendIFBox();
-  virtual PetscErrorCode oceanTemperature();
+  virtual PetscErrorCode oceanTemperature(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForGroundingLineBox(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForIceFrontBox(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForOtherShelves(const POBMConstants &constants);
@@ -157,13 +157,14 @@ private:
                 T_dummy, S_dummy,
                 continental_shelf_depth;
 
-  PetscInt      numberOfBasins;
+  int      numberOfBasins;
 
 
 protected:
 
   Timeseries *delta_T;
   double delta_T_factor;
+  double temp_anomaly;
 
 
   bool  ocean_oceanboxmodel_deltaT_set, 
