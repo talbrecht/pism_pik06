@@ -130,6 +130,7 @@ private:
                       C_vec,
 
                       mean_salinity_GLbox_vector,
+                      mean_temperature_GLbox_vector,
                       mean_meltrate_GLbox_vector,
                       mean_overturning_GLbox_vector,
 
@@ -140,8 +141,7 @@ private:
 
   IceModelVec2S ICERISESmask, 
                 BOXMODELmask, 
-                OCEANMEANmask, //FIXME delete OCEANMEANmask
-                CHECKmask, //FIXME delete CHECKmask
+                OCEANMEANmask, //FIXME delete when development finished
                 Soc, 
                 Soc_base, 
                 Toc, 
