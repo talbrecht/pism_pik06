@@ -72,7 +72,7 @@ public:
       double        gamma_T_o, meltFactor, meltSalinity, b2;
       double        continental_shelf_depth;
 
-      int      numberOfBasins; 
+      int           numberOfBasins; 
 
   };
 
@@ -97,8 +97,8 @@ private:
   virtual PetscErrorCode computeOCEANMEANS();
   virtual PetscErrorCode extentOfIceShelves();
   virtual PetscErrorCode identifyBOXMODELmask();
-  virtual PetscErrorCode extendGLBox();
-  virtual PetscErrorCode extendIFBox();
+  //virtual PetscErrorCode extendGLBox();
+  //virtual PetscErrorCode extendIFBox();
   virtual PetscErrorCode oceanTemperature(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForGroundingLineBox(const POBMConstants &constants);
   virtual PetscErrorCode basalMeltRateForIceFrontBox(const POBMConstants &constants);
@@ -122,26 +122,27 @@ private:
                     imask_exclude,
                     imask_unidentified;
 
-  PetscScalar     counter_box_unidentified;
+  PetscScalar     counter_box_unidentified, 
+                  counter_floating,
+                  numberOfBoxes; // number of OBM-Boxes, there is one more box where Beckmann-Goose is computed..
 
   std::vector<double> Toc_base_vec,
                       Soc_base_vec,
                       gamma_T_star_vec,
                       C_vec,
 
-                      mean_salinity_GLbox_vector,
-                      mean_temperature_GLbox_vector,
-                      mean_meltrate_GLbox_vector,
-                      mean_overturning_GLbox_vector,
+                      mean_salinity_boundary_vector, //FIXME rename these, used at all boundaries
+                      mean_temperature_boundary_vector,
+                      mean_meltrate_boundary_vector,
+                      mean_overturning_GLbox_vector; // execpt for the overturning...
 
-                      counter,
-                      counter_GLbox,
-                      counter_CFbox;
-                      //k_basins;
+  std::vector< std::vector<double> >  counter_boxes; 
 
   IceModelVec2S ICERISESmask, 
-                BOXMODELmask, 
+                BOXMODELmask,
                 OCEANMEANmask, //FIXME delete when development finished
+                DistGL,
+                DistIF,
                 Soc, 
                 Soc_base, 
                 Toc, 
@@ -157,7 +158,7 @@ private:
                 T_dummy, S_dummy,
                 continental_shelf_depth;
 
-  int      numberOfBasins;
+  int      numberOfBasins; 
 
 
 protected:
