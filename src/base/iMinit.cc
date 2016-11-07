@@ -1058,7 +1058,7 @@ PetscErrorCode IceModel::init_calving() {
 
     if (eigen_calving == NULL) {
       eigen_calving = new PISMEigenCalving(grid, config,
-                                           stress_balance);
+                                           stress_balance, ocean);
     }
 
     ierr = eigen_calving->init(variables); CHKERRQ(ierr);

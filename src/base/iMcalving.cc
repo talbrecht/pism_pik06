@@ -50,7 +50,7 @@ PetscErrorCode IceModel::do_calving() {
   // which is defined at grid points that were icy at the *beginning*
   // of a time-step.
   if (eigen_calving != NULL) {
-    ierr = eigen_calving->update(dt, vMask, vHref, ice_thickness); CHKERRQ(ierr);
+    ierr = eigen_calving->update(dt, vMask, vHref, ice_thickness, ice_surface_elevation, bed_topography); CHKERRQ(ierr);
   }
 
   if (ocean_kill_calving != NULL) {

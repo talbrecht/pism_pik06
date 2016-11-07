@@ -24,18 +24,24 @@
 
 class PISMStressBalance;
 
+class PISMOceanModel;
+
 class PISMEigenCalving : public PISMComponent
 {
 public:
   PISMEigenCalving(IceGrid &g, const PISMConfig &conf,
-                   PISMStressBalance *stress_balance);
+                   PISMStressBalance *stress_balance, PISMOceanModel *ocean);
   virtual ~PISMEigenCalving();
 
   virtual PetscErrorCode init(PISMVars &vars);
   virtual PetscErrorCode update(double dt,
                                 IceModelVec2Int &pism_mask,
                                 IceModelVec2S &Href,
-                                IceModelVec2S &ice_thickness);
+                                IceModelVec2S &ice_thickness,
+                                IceModelVec2S &ice_surface_elevation,
+                                IceModelVec2S &bed_topography);
+
+
 
   virtual PetscErrorCode max_timestep(double my_t, double &my_dt, bool &restrict);
 
@@ -50,12 +56,14 @@ protected:
   const int m_stencil_width;
   IceModelVec2Int *m_mask;
   PISMStressBalance *m_stress_balance;
+  PISMOceanModel *m_ocean;
   double m_K;
   bool m_restrict_timestep;
 
   PetscErrorCode update_strain_rates();
   PetscErrorCode remove_narrow_tongues(IceModelVec2Int &pism_mask,
                                        IceModelVec2S &ice_thickness);
+
 };
 
 

@@ -22,10 +22,15 @@
 #include "PISMStressBalance.hh"
 #include "Mask.hh"
 
+#include "pism_options.hh"
+#include <assert.h>
+#include "PISMOcean.hh"
+
+
 PISMEigenCalving::PISMEigenCalving(IceGrid &g, const PISMConfig &conf,
-                                   PISMStressBalance *stress_balance)
+                                   PISMStressBalance *stress_balance, PISMOceanModel   *ocean)
   : PISMComponent(g, conf), m_stencil_width(2), m_mask(NULL),
-    m_stress_balance(stress_balance) {
+    m_stress_balance(stress_balance), m_ocean(ocean) {
   PetscErrorCode ierr;
   ierr = m_strain_rates.create(grid, "edot", WITH_GHOSTS,
                                m_stencil_width,
@@ -53,6 +58,9 @@ PISMEigenCalving::PISMEigenCalving(IceGrid &g, const PISMConfig &conf,
 
   m_K = config.get("eigen_calving_K");
   m_restrict_timestep = config.get_flag("cfl_eigen_calving");
+
+
+
 }
 
 PISMEigenCalving::~PISMEigenCalving() {
@@ -90,7 +98,9 @@ PetscErrorCode PISMEigenCalving::init(PISMVars &vars) {
 PetscErrorCode PISMEigenCalving::update(double dt,
                                         IceModelVec2Int &pism_mask,
                                         IceModelVec2S &Href,
-                                        IceModelVec2S &ice_thickness) {
+                                        IceModelVec2S &ice_thickness,
+                                        IceModelVec2S &ice_surface_elevation,
+                                        IceModelVec2S &bed_topography) {
   PetscErrorCode ierr;
 
   // Distance (grid cells) from calving front where strain rate is evaluated
@@ -102,11 +112,35 @@ PetscErrorCode PISMEigenCalving::update(double dt,
 
   MaskQuery mask(pism_mask);
 
+  //bool eigen_calving = FALSE;
+  bool cliff_calving_set;
+  ierr = PISMOptionsIsSet("-cliff_calving", cliff_calving_set); CHKERRQ(ierr);
+
+  double sea_level = 0.0,
+         calving_rate = 0.0;
+
+  double rhoi       = config.get("ice_density");
+  double rhow       = config.get("sea_water_density");
+ 
+  if (cliff_calving_set) {
+
+    ierr = ice_surface_elevation.begin_access(); CHKERRQ(ierr);
+    ierr = bed_topography.begin_access(); CHKERRQ(ierr);
+
+    assert(m_ocean != NULL);
+    ierr = m_ocean->sea_level_elevation(sea_level); CHKERRQ(ierr);
+
+     ierr = verbPrintf(2, grid.com,
+                    "!!!!! cliff_calving active with with sealevel=%.2f\n",sea_level); CHKERRQ(ierr);
+
+  }
+
   ierr = ice_thickness.begin_access(); CHKERRQ(ierr);
   ierr = pism_mask.begin_access(); CHKERRQ(ierr);
   ierr = Href.begin_access(); CHKERRQ(ierr);
   ierr = m_strain_rates.begin_access(); CHKERRQ(ierr);
   ierr = m_thk_loss.begin_access(); CHKERRQ(ierr);
+
   for (int i = grid.xs; i < grid.xs + grid.xm; ++i) {
     for (int j = grid.ys; j < grid.ys + grid.ym; ++j) {
 
@@ -127,6 +161,8 @@ PetscErrorCode PISMEigenCalving::update(double dt,
       // have floating ice neighbors after the mass continuity step
       if (mask.ice_free_ocean(i, j) &&
           mask.next_to_floating_ice(i, j)) {
+
+        //eigen_calving = TRUE;
 
         if (mask.floating_ice(i + 1, j)) {
           N_floating_neighbors += 1;
@@ -192,8 +228,10 @@ PetscErrorCode PISMEigenCalving::update(double dt,
         }
 
         // calculate mass loss with respect to the associated ice thickness and the grid size:
-        double calving_rate = calving_rate_horizontal * H_average / grid.dx; // in m/s
+        //double calving_rate = calving_rate_horizontal * H_average / grid.dx; // in m/s
+        calving_rate = calving_rate_horizontal * H_average / grid.dx; // in m/s
 
+/*
         // apply calving rate at partially filled or empty grid cells
         if (calving_rate > 0.0) {
           Href(i, j) -= calving_rate * dt; // in m
@@ -210,8 +248,117 @@ PetscErrorCode PISMEigenCalving::update(double dt,
               m_thk_loss(i, j) /= N_floating_neighbors;
           }
         }
-
+*/
       } // end of "if (ice_free_ocean && next_to_floating)"
+
+      //////////////////////////////////////////////////////////////////////////
+      //bool cliff_calving_set;
+      //ierr = PISMOptionsIsSet("-cliff_calving", cliff_calving_set); CHKERRQ(ierr);
+
+      int N_grounded_neighbors = 0;
+
+      if (cliff_calving_set) {
+
+
+          double
+            h_average = 0.0,
+            H_average = 0.0,
+            b_average = 0.0;
+
+
+          if (mask.ice_free_ocean(i, j) &&
+              mask.next_to_grounded_ice(i, j)) {
+
+            if (mask.grounded_ice(i + 1, j)) {
+              N_grounded_neighbors += 1;
+              h_average += ice_surface_elevation(i + 1, j);
+              H_average += ice_thickness(i + 1, j);
+              b_average += bed_topography(i + 1, j);
+            }
+
+            if (mask.grounded_ice(i - 1, j)) {
+              N_grounded_neighbors += 1;
+              h_average += ice_surface_elevation(i - 1, j);
+              H_average += ice_thickness(i - 1, j);
+              b_average += bed_topography(i - 1, j);
+            }
+
+            if (mask.grounded_ice(i, j + 1)) {
+              N_grounded_neighbors += 1;
+              h_average += ice_surface_elevation(i, j + 1);
+              H_average += ice_thickness(i, j + 1);
+              b_average += bed_topography(i, j + 1);
+            }
+
+            if (mask.grounded_ice(i, j - 1)) {
+              N_grounded_neighbors += 1;
+              h_average += ice_surface_elevation(i, j - 1);
+              H_average += ice_thickness(i, j - 1);
+              b_average += bed_topography(i, j - 1);
+            }
+
+            if (N_grounded_neighbors > 0) {
+              h_average /= N_grounded_neighbors;
+              H_average /= N_grounded_neighbors;
+              b_average /= N_grounded_neighbors;
+            }
+
+            double
+              height_above_sl = h_average + sea_level,
+              height_critical = 100; 
+
+            height_above_sl = (b_average + sea_level) * (rhow/rhoi-1); //assuming floatation at GL
+
+
+            //ierr = PISMOptionsReal("-cliff_calving_height","cliff calving height set",height_critical, height_critical_set); CHKERRQ(ierr);
+
+            double
+              calving_rate_horizontal = 3000.0 * PetscMax(0, PetscMin(1,((height_above_sl-height_critical)/20.0))); //Pollard et al., 2015
+
+            //ierr = verbPrintf(2, grid.com,
+            //        "!!!!! cliff_calving with h= %.0f m and c=%.0f at point %d, %d with %d grounded neighbors, sl=%.0f\n",h_average,calving_rate_horizontal,i,j,N_grounded_neighbors,sea_level); CHKERRQ(ierr);
+            
+            calving_rate_horizontal = grid.convert(calving_rate_horizontal, "m/year", "m/s");
+
+            calving_rate+=calving_rate_horizontal * H_average / grid.dx; // in m/s
+
+          }
+        }
+
+        // apply calving rate at partially filled or empty grid cells
+        if (calving_rate > 0.0) {
+          Href(i, j) -= calving_rate * dt; // in m
+
+          if(Href(i, j) < 0.0) {
+            // Partially filled grid cell became ice-free
+
+            m_thk_loss(i, j) = -Href(i, j); // in m, corresponds to additional ice loss
+            Href(i, j)       = 0.0;
+
+            // additional mass loss will be distributed among
+            // N_floating_neighbors:
+            if(N_floating_neighbors > 0) {
+              m_thk_loss(i, j) /= N_floating_neighbors;
+              ierr = verbPrintf(2, grid.com,
+                    "!!!!! eigen_calving loss %.0f m and c=%.0f at point %d, %d with %d floating neighbors\n",m_thk_loss(i, j),grid.convert(calving_rate, "m/s","m/year"),i,j,N_floating_neighbors); CHKERRQ(ierr);
+            
+            }
+            else if (N_grounded_neighbors > 0) {
+              m_thk_loss(i, j) /= N_grounded_neighbors;
+              ierr = verbPrintf(2, grid.com,
+                    "!!!!! cliff_calving loss %.0f m and c=%.0f at point %d, %d with %d grounded neighbors\n",m_thk_loss(i, j),grid.convert(calving_rate, "m/s","m/year"),i,j,N_grounded_neighbors); CHKERRQ(ierr);
+            
+            }
+            
+          }
+        }
+
+
+
+
+
+         ///////////////////////////////////////////////////////////////////////////
+
     } // j-loop
   } // i-loop
   ierr = m_thk_loss.end_access(); CHKERRQ(ierr);
@@ -246,6 +393,12 @@ PetscErrorCode PISMEigenCalving::update(double dt,
   ierr = Href.end_access(); CHKERRQ(ierr);
   ierr = m_strain_rates.end_access(); CHKERRQ(ierr);
   ierr = m_thk_loss.end_access(); CHKERRQ(ierr);
+
+  if (cliff_calving_set) {
+  ierr = ice_surface_elevation.end_access(); CHKERRQ(ierr);
+  ierr = bed_topography.end_access(); CHKERRQ(ierr);
+  }
+
 
   ierr = pism_mask.update_ghosts(); CHKERRQ(ierr);
 
