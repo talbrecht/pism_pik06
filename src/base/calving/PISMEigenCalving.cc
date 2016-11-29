@@ -262,6 +262,9 @@ PetscErrorCode PISMEigenCalving::update(double dt,
 
       if (cliff_calving_set && mask.ice_free_ocean(i, j) &&
           mask.next_to_grounded_ice(i, j)) {
+      //if (cliff_calving_set && mask.grounded_ice(i, j) &&
+      //    mask.next_to_ice_free_ocean(i, j)) {
+
 
 
           double
@@ -307,11 +310,17 @@ PetscErrorCode PISMEigenCalving::update(double dt,
               b_average /= N_grounded_neighbors;
             }
 
+
+              //h_average = ice_surface_elevation(i, j);;
+              //H_average = ice_thickness(i, j);
+              //b_average = bed_topography(i, j);
+
             double
-              height_above_sl = h_average + sea_level,
+              height_above_sl = h_average - sea_level,
               height_critical = 100; 
 
-            height_above_sl = (b_average + sea_level) * (rhow/rhoi-1); //assuming floatation at GL
+            height_above_sl = (b_average - sea_level) * (1.0-rhow/rhoi); //assuming floatation at GL
+            //height_above_sl = 0.0;
 
 
             //ierr = PISMOptionsReal("-cliff_calving_height","cliff calving height set",height_critical, height_critical_set); CHKERRQ(ierr);
@@ -320,7 +329,8 @@ PetscErrorCode PISMEigenCalving::update(double dt,
               calving_rate_horizontal = 3000.0 * PetscMax(0, PetscMin(1,((height_above_sl-height_critical)/20.0))); //Pollard et al., 2015
 
             //ierr = verbPrintf(2, grid.com,
-            //        "!!!!! cliff_calving with h= %.0f m and c=%.0f at point %d, %d with %d grounded neighbors, sl=%.0f\n",height_above_sl,calving_rate_horizontal,i,j,N_grounded_neighbors,sea_level); CHKERRQ(ierr);
+            //        "!!!!! cliff_calving with h=%.0f m, hs=%.0f m and c=%.0f at point %d, %d with %d grounded neighbors, sl=%.0f, b=%.0f\n",
+            //        h_average,height_above_sl,calving_rate_horizontal,i,j,N_grounded_neighbors,sea_level,b_average); CHKERRQ(ierr);
             
             calving_rate_horizontal = grid.convert(calving_rate_horizontal, "m/year", "m/s");
 
@@ -334,6 +344,7 @@ PetscErrorCode PISMEigenCalving::update(double dt,
 
       if ((mask.ice_free_ocean(i, j) && mask.next_to_floating_ice(i, j)) || 
          (cliff_calving_set && mask.ice_free_ocean(i, j) && mask.next_to_grounded_ice(i, j))) {
+         //(cliff_calving_set && mask.grounded_ice(i, j) && mask.next_to_ice_free_ocean(i, j))) {
 
 
         // apply calving rate at partially filled or empty grid cells
@@ -351,11 +362,12 @@ PetscErrorCode PISMEigenCalving::update(double dt,
             //if(N_floating_neighbors > 0) {
             //  m_thk_loss(i, j) /= N_floating_neighbors;
 
+            
             if(N_floating_neighbors > 0 || N_grounded_neighbors > 0) {
 
               int N_grflsum_neighbors = N_floating_neighbors + N_grounded_neighbors;
               m_thk_loss(i, j) /= N_grflsum_neighbors;
-
+              /*
               if (N_floating_neighbors > 0) {
                 ierr = verbPrintf(2, grid.com,
                     "!!!!! eigen_calving loss %.0f m and c=%.0f at point %d, %d with %d floating neighbors\n",m_thk_loss(i, j),grid.convert(calving_rate, "m/s","m/year"),i,j,N_floating_neighbors); CHKERRQ(ierr);
@@ -363,7 +375,7 @@ PetscErrorCode PISMEigenCalving::update(double dt,
               if (N_grounded_neighbors > 0) {
                 ierr = verbPrintf(2, grid.com,
                     "!!!!! cliff_calving loss %.0f m and c=%.0f at point %d, %d with %d grounded neighbors\n",m_thk_loss(i, j),grid.convert(calving_rate, "m/s","m/year"),i,j,N_grounded_neighbors); CHKERRQ(ierr);
-              }
+              }*/
             }
           }
         }
@@ -382,7 +394,9 @@ PetscErrorCode PISMEigenCalving::update(double dt,
     for (int j = grid.ys; j < grid.ys + grid.ym; ++j) {
       double thk_loss_ij = 0.0;
 
-      if (mask.floating_ice(i, j) &&
+      //if (mask.floating_ice(i, j) &&
+      //if ( (mask.floating_ice(i, j) || (mask.grounded_ice(i, j)) &&  bed_topography(i, j) - sea_level < 0.0) &&
+      if ( (mask.floating_ice(i, j) || mask.grounded_ice(i, j)) &&
           (m_thk_loss(i + 1, j) > 0.0 || m_thk_loss(i - 1, j) > 0.0 ||
            m_thk_loss(i, j + 1) > 0.0 || m_thk_loss(i, j - 1) > 0.0)) {
 
